@@ -65,6 +65,30 @@
   body.dark #sidebar,body.dark .panel{background:#0b1220;color:#cfe2ff;border-color:#122334}
   body.dark #reader{background:#071022}
   body.dark input,body.dark textarea,body.dark select{background:#071022;color:#cfe2ff;border-color:#122334}
+  /* Fullscreen mode */
+  body.fullscreen #app{height:100vh;padding:0}
+  body.fullscreen header{display:none}
+  body.fullscreen #sidebar{display:none}
+  body.fullscreen #reader-wrap{padding:0}
+  body.fullscreen #reader-head{position:fixed;top:0;left:0;right:0;background:rgba(255,255,255,0.9);padding:10px;z-index:100;display:none}
+  body.fullscreen #reader-head.show{display:flex}
+  body.fullscreen #reader{border-radius:0;border:none;padding:20px}
+  body.dark.fullscreen #reader-head{background:rgba(11,18,32,0.9)}
+  /* Font size adjustments */
+  #reader{font-size:1rem;line-height:1.5;max-width:800px;margin:0 auto}
+  #reader.large{font-size:1.2rem}
+  #reader.xlarge{font-size:1.5rem}
+  #reader.small{font-size:0.9rem}
+  /* Config section */
+  .config-section{border:1px solid #e6e9ee;border-radius:8px;padding:12px;margin-bottom:12px;background:#fafcff}
+  body.dark .config-section{background:#0b1220;border-color:#122334}
+  .config-section h4{margin-bottom:8px}
+  .config-section.hidden{display:none}
+  /* Icons */
+  .icon-btn{display:inline-flex;align-items:center;justify-content:center;width:32px;height:32px;border-radius:6px;background:transparent;border:1px solid rgba(0,0,0,0.1);cursor:pointer}
+  body.dark .icon-btn{border-color:rgba(255,255,255,0.2)}
+  .icon-btn:hover{background:rgba(0,0,0,0.05)}
+  body.dark .icon-btn:hover{background:rgba(255,255,255,0.1)}
 </style>
 </head>
 <body>
@@ -75,6 +99,7 @@
     <button id="btnToggleSidebar" class="small">Toggle TOC</button>
     <button id="btnSettings" class="small">Settings</button>
     <button id="btnAdminPanel" class="small">Admin</button>
+    <button id="btnFullscreen" class="small">Fullscreen</button>
   </div>
 </header>
 
@@ -95,6 +120,11 @@
       </div>
       <div class="right">
         <button id="btnRefresh" class="small">Load từ GitHub</button>
+        <div style="display:flex;gap:4px;margin-left:8px">
+          <button id="btnFontSmaller" class="icon-btn">A-</button>
+          <button id="btnFontReset" class="icon-btn">A</button>
+          <button id="btnFontLarger" class="icon-btn">A+</button>
+        </div>
       </div>
     </div>
 
@@ -144,14 +174,25 @@
   </div>
 
   <div id="adminArea" style="display:none">
-    <h4>Cấu hình GitHub (Nhập để load)</h4>
-    <div class="form-row"><label>Owner</label><input id="ghOwner" placeholder="owner (user hoặc org)"/></div>
-    <div class="form-row"><label>Repo</label><input id="ghRepo" placeholder="repo name"/></div>
-    <div class="form-row"><label>Base path (folder) (vd: gis)</label><input id="ghBasePath" placeholder="ví dụ: gis" /></div>
-    <div class="form-row"><label>Token (PAT) — không lưu nếu không check</label><input id="ghToken" type="password" placeholder="ghp_..." /></div>
-    <div style="display:flex;gap:8px">
-      <button id="btnLoadFromGH" class="small">Load từ GitHub</button>
-      <label style="display:flex;align-items:center;gap:6px"><input id="rememberToken" type="checkbox"/> Giữ token</label>
+    <div class="config-section" id="githubConfigSection">
+      <h4>Cấu hình GitHub</h4>
+      <div class="form-row"><label>Owner</label><input id="ghOwner" placeholder="owner (user hoặc org)"/></div>
+      <div class="form-row"><label>Repo</label><input id="ghRepo" placeholder="repo name"/></div>
+      <div class="form-row"><label>Base path (folder) (vd: gis)</label><input id="ghBasePath" placeholder="ví dụ: gis" /></div>
+      <div class="form-row"><label>Token (PAT)</label><input id="ghToken" type="password" placeholder="ghp_..." /></div>
+      <div style="display:flex;gap:8px">
+        <button id="btnSaveGHConfig" class="small">Lưu cấu hình</button>
+        <button id="btnLoadFromGH" class="small">Load từ GitHub</button>
+        <button id="btnReconfigGH" class="small">Cấu hình lại</button>
+      </div>
+    </div>
+
+    <div class="config-section hidden" id="githubConfigHidden">
+      <h4>Cấu hình GitHub</h4>
+      <div class="muted">Đã lưu cấu hình GitHub</div>
+      <div style="margin-top:8px">
+        <button id="btnShowGHConfig" class="small">Cấu hình lại GitHub</button>
+      </div>
     </div>
 
     <hr style="margin:10px 0"/>
@@ -234,7 +275,8 @@ const GH = {
     const existing = await this.getFile(path);
     const body = {
       message: message || `Update ${path}`,
-      content: btoa(unescape(encodeURIComponent(contentText)))
+      content: btoa(unescape(encodeURIComponent(contentText))),
+      branch: 'main'
     };
     if(existing && existing.sha) body.sha = existing.sha;
     const url = this.apiUrl(`contents/${encodeURIComponent(path)}`);
@@ -250,7 +292,7 @@ const GH = {
     // delete file by supplying sha
     const existing = await this.getFile(path);
     if(!existing) throw new Error('File not found');
-    const body = {message: message || `Delete ${path}`, sha: existing.sha};
+    const body = {message: message || `Delete ${path}`, sha: existing.sha, branch: 'main'};
     const url = this.apiUrl(`contents/${encodeURIComponent(path)}`);
     const res = await fetch(url, {
       method:'DELETE',
@@ -302,6 +344,9 @@ document.addEventListener('DOMContentLoaded', async ()=>{
   state.users = loadLocalUsers();
   state.stats = loadLocalStats();
 
+  // Load GitHub config from localStorage
+  loadGHConfig();
+  
   // restore token if remembered in sessionStorage
   const token = sessionStorage.getItem('gh_token');
   if(token) $('ghToken').value = token; // note: element may not exist yet
@@ -311,6 +356,7 @@ document.addEventListener('DOMContentLoaded', async ()=>{
   renderStats();
 
   bindUI();
+  applyPreferences();
 
   // Device handling
   let deviceID = localStorage.getItem('deviceID');
@@ -327,6 +373,64 @@ document.addEventListener('DOMContentLoaded', async ()=>{
     }
   }
 });
+
+/* =========================
+   GitHub Config Management
+   ========================= */
+function saveGHConfig() {
+  const owner = $('ghOwner').value.trim();
+  const repo = $('ghRepo').value.trim();
+  const basePath = $('ghBasePath').value.trim();
+  const token = $('ghToken').value.trim();
+  
+  if (!owner || !repo) {
+    alert('Vui lòng nhập Owner và Repo');
+    return;
+  }
+  
+  const config = { owner, repo, basePath, token };
+  localStorage.setItem('gh_config', JSON.stringify(config));
+  
+  GH.setConfig({owner, repo, basePath, token, remember: true});
+  
+  // Hide config inputs and show config saved message
+  $('githubConfigSection').classList.add('hidden');
+  $('githubConfigHidden').classList.remove('hidden');
+  
+  alert('Đã lưu cấu hình GitHub');
+}
+
+function loadGHConfig() {
+  const configStr = localStorage.getItem('gh_config');
+  if (configStr) {
+    try {
+      const config = JSON.parse(configStr);
+      $('ghOwner').value = config.owner || '';
+      $('ghRepo').value = config.repo || '';
+      $('ghBasePath').value = config.basePath || '';
+      $('ghToken').value = config.token || '';
+      
+      GH.setConfig({
+        owner: config.owner,
+        repo: config.repo,
+        basePath: config.basePath,
+        token: config.token,
+        remember: true
+      });
+      
+      // Hide config inputs and show config saved message
+      $('githubConfigSection').classList.add('hidden');
+      $('githubConfigHidden').classList.remove('hidden');
+    } catch (e) {
+      console.error('Error loading GitHub config:', e);
+    }
+  }
+}
+
+function showGHConfig() {
+  $('githubConfigSection').classList.remove('hidden');
+  $('githubConfigHidden').classList.add('hidden');
+}
 
 /* =========================
    UI Bindings
@@ -373,17 +477,134 @@ function bindUI(){
   $('btnAdminLogin') && $('btnAdminLogin').addEventListener('click', adminLogin);
   $('btnLoadFromGH') && $('btnLoadFromGH').addEventListener('click', loadFromGitHub);
   $('btnUploadToGH') && $('btnUploadToGH').addEventListener('click', uploadToGitHub);
+  
+  // GitHub config buttons
+  $('btnSaveGHConfig') && $('btnSaveGHConfig').addEventListener('click', saveGHConfig);
+  $('btnReconfigGH') && $('btnReconfigGH').addEventListener('click', showGHConfig);
+  $('btnShowGHConfig') && $('btnShowGHConfig').addEventListener('click', showGHConfig);
 
   // Refresh button
   $('btnRefresh') && $('btnRefresh').addEventListener('click', ()=>{
     if(confirm('Tải lại documents từ GitHub (F5 cũng sẽ làm điều này)?')) loadFromGitHub();
   });
 
+  // Font size controls
+  $('btnFontSmaller') && $('btnFontSmaller').addEventListener('click', () => {
+    const reader = $('reader');
+    if (reader.classList.contains('xlarge')) {
+      reader.classList.remove('xlarge');
+      reader.classList.add('large');
+    } else if (reader.classList.contains('large')) {
+      reader.classList.remove('large');
+    } else if (!reader.classList.contains('small')) {
+      reader.classList.add('small');
+    }
+    saveFontSize();
+  });
+  
+  $('btnFontReset') && $('btnFontReset').addEventListener('click', () => {
+    const reader = $('reader');
+    reader.classList.remove('small', 'large', 'xlarge');
+    saveFontSize();
+  });
+  
+  $('btnFontLarger') && $('btnFontLarger').addEventListener('click', () => {
+    const reader = $('reader');
+    if (reader.classList.contains('small')) {
+      reader.classList.remove('small');
+    } else if (!reader.classList.contains('large')) {
+      reader.classList.add('large');
+    } else if (reader.classList.contains('large')) {
+      reader.classList.remove('large');
+      reader.classList.add('xlarge');
+    }
+    saveFontSize();
+  });
+
+  // Fullscreen button
+  $('btnFullscreen') && $('btnFullscreen').addEventListener('click', toggleFullscreen);
+  
+  // Exit fullscreen on ESC
+  document.addEventListener('fullscreenchange', handleFullscreenChange);
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && document.fullscreenElement) {
+      exitFullscreen();
+    }
+    // Show reader head in fullscreen on mouse move
+    if (document.fullscreenElement) {
+      $('reader-head').classList.add('show');
+      clearTimeout(window.fullscreenHideTimeout);
+      window.fullscreenHideTimeout = setTimeout(() => {
+        $('reader-head').classList.remove('show');
+      }, 2000);
+    }
+  });
+  
+  // Show/hide reader head in fullscreen on mouse move
+  document.addEventListener('mousemove', () => {
+    if (document.fullscreenElement) {
+      $('reader-head').classList.add('show');
+      clearTimeout(window.fullscreenHideTimeout);
+      window.fullscreenHideTimeout = setTimeout(() => {
+        $('reader-head').classList.remove('show');
+      }, 2000);
+    }
+  });
+
   // Save prefs immediate bindings
-  $('fontSize') && $('fontSize').addEventListener('change', e=>$('docContent').style.fontSize = e.target.value + 'rem');
+  $('fontSize') && $('fontSize').addEventListener('change', e=>{
+    const reader = $('reader');
+    reader.classList.remove('small', 'large', 'xlarge');
+    if (e.target.value === '0.9') reader.classList.add('small');
+    if (e.target.value === '1.2') reader.classList.add('large');
+    if (e.target.value === '1.5') reader.classList.add('xlarge');
+  });
   $('themeSelect') && $('themeSelect').addEventListener('change', e=>document.body.classList.toggle('dark', e.target.value==='dark'));
-  $('lineHeight') && $('lineHeight').addEventListener('change', e=>$('docContent').style.lineHeight = e.target.value);
-  $('contentWidth') && $('contentWidth').addEventListener('change', e=>$('docContent').style.maxWidth = e.target.value==='100%'? '100%': (e.target.value+'px'));
+  $('lineHeight') && $('lineHeight').addEventListener('change', e=>$('reader').style.lineHeight = e.target.value);
+  $('contentWidth') && $('contentWidth').addEventListener('change', e=>$('reader').style.maxWidth = e.target.value==='100%'? '100%': (e.target.value+'px'));
+}
+
+/* =========================
+   Fullscreen Functions
+   ========================= */
+function toggleFullscreen() {
+  if (!document.fullscreenElement) {
+    enterFullscreen();
+  } else {
+    exitFullscreen();
+  }
+}
+
+function enterFullscreen() {
+  const elem = document.documentElement;
+  if (elem.requestFullscreen) {
+    elem.requestFullscreen();
+  } else if (elem.webkitRequestFullscreen) {
+    elem.webkitRequestFullscreen();
+  } else if (elem.msRequestFullscreen) {
+    elem.msRequestFullscreen();
+  }
+}
+
+function exitFullscreen() {
+  if (document.exitFullscreen) {
+    document.exitFullscreen();
+  } else if (document.webkitExitFullscreen) {
+    document.webkitExitFullscreen();
+  } else if (document.msExitFullscreen) {
+    document.msExitFullscreen();
+  }
+}
+
+function handleFullscreenChange() {
+  if (document.fullscreenElement) {
+    document.body.classList.add('fullscreen');
+    $('btnFullscreen').textContent = 'Thoát Fullscreen';
+  } else {
+    document.body.classList.remove('fullscreen');
+    $('btnFullscreen').textContent = 'Fullscreen';
+    $('reader-head').classList.remove('show');
+  }
 }
 
 /* =========================
@@ -400,19 +621,40 @@ function savePreferences(){
   applyPreferences();
   alert('Đã lưu cài đặt');
 }
+
+function saveFontSize() {
+  const reader = $('reader');
+  let fontSize = '1';
+  if (reader.classList.contains('small')) fontSize = '0.9';
+  if (reader.classList.contains('large')) fontSize = '1.2';
+  if (reader.classList.contains('xlarge')) fontSize = '1.5';
+  
+  $('fontSize').value = fontSize;
+  savePreferences();
+}
+
 function resetPreferences(){
-  localStorage.removeItem('br_prefs'); applyPreferences();
+  localStorage.removeItem('br_prefs'); 
+  applyPreferences();
   alert('Đã đặt lại mặc định');
 }
+
 function applyPreferences(){
   const prefs = JSON.parse(localStorage.getItem('br_prefs') || '{"fontSize":"1","theme":"light","lineHeight":"1.5","contentWidth":"800"}');
   $('fontSize').value = prefs.fontSize;
   $('themeSelect').value = prefs.theme;
   $('lineHeight').value = prefs.lineHeight;
   $('contentWidth').value = prefs.contentWidth;
-  $('docContent').style.fontSize = prefs.fontSize + 'rem';
-  $('docContent').style.lineHeight = prefs.lineHeight;
-  $('docContent').style.maxWidth = prefs.contentWidth==='100%'? '100%': (prefs.contentWidth+'px');
+  
+  // Apply font size
+  const reader = $('reader');
+  reader.classList.remove('small', 'large', 'xlarge');
+  if (prefs.fontSize === '0.9') reader.classList.add('small');
+  if (prefs.fontSize === '1.2') reader.classList.add('large');
+  if (prefs.fontSize === '1.5') reader.classList.add('xlarge');
+  
+  $('reader').style.lineHeight = prefs.lineHeight;
+  $('reader').style.maxWidth = prefs.contentWidth==='100%'? '100%': (prefs.contentWidth+'px');
   document.body.classList.toggle('dark', prefs.theme==='dark');
 }
 
@@ -496,8 +738,22 @@ async function openDocument(index){
       const rawUrl = await GH.getRawUrl((GH.basePath?GH.basePath+'/':'') + doc.file);
       if(rawUrl){
         const res = await fetch(rawUrl);
-        const html = await res.text();
-        $('docContent').innerHTML = html;
+        let html = await res.text();
+        
+        // Ensure UTF-8 charset for Vietnamese text
+        if (!html.includes('charset=') && !html.includes('Charset=')) {
+          html = html.replace('<head>', '<head><meta charset="UTF-8">');
+        }
+        
+        // Use iframe to prevent CSS conflicts
+        const iframe = document.createElement('iframe');
+        iframe.srcdoc = html;
+        iframe.style.width = '100%';
+        iframe.style.height = '100%';
+        iframe.style.border = 'none';
+        
+        $('docContent').innerHTML = '';
+        $('docContent').appendChild(iframe);
       } else {
         // maybe content stored inline in documents.json
         $('docContent').innerHTML = doc.content || '<em>Không có nội dung</em>';
@@ -590,19 +846,43 @@ function adminLoggedIn(){
   renderAdminDocList();
   renderUsersList();
   renderStats();
+  localStorage.setItem('adminLogged', 'true');
 }
 
 $('btnAdminLogin') && $('btnAdminLogin').addEventListener('click', adminLogin);
 
+// Check if admin is already logged in
+if (localStorage.getItem('adminLogged') === 'true') {
+  adminLoggedIn();
+}
+
 async function loadFromGitHub(){
-  // read config from inputs
-  const owner = $('ghOwner').value.trim();
-  const repo = $('ghRepo').value.trim();
-  const basePath = $('ghBasePath').value.trim();
-  const token = $('ghToken').value.trim();
-  const remember = $('rememberToken').checked;
+  // read config from inputs or localStorage
+  let owner, repo, basePath, token;
+  
+  const configStr = localStorage.getItem('gh_config');
+  if (configStr) {
+    try {
+      const config = JSON.parse(configStr);
+      owner = config.owner;
+      repo = config.repo;
+      basePath = config.basePath;
+      token = config.token;
+    } catch (e) {
+      console.error('Error loading GitHub config:', e);
+    }
+  }
+  
+  // If not in localStorage, use inputs
+  if (!owner || !repo) {
+    owner = $('ghOwner').value.trim();
+    repo = $('ghRepo').value.trim();
+    basePath = $('ghBasePath').value.trim();
+    token = $('ghToken').value.trim();
+  }
+  
   if(!owner||!repo) return alert('Nhập owner và repo');
-  GH.setConfig({owner, repo, basePath, token, remember});
+  GH.setConfig({owner, repo, basePath, token, remember: true});
   try{
     // load documents.json, users.json, stats.json
     const docs = await GH.getJson((GH.basePath?GH.basePath+'/':'') + 'documents.json');
@@ -652,8 +932,8 @@ async function uploadToGitHub(){
   reader.onload = async (e) => {
     const htmlContent = e.target.result;
     // create path: basePath/author/filename
-    const folder = author ? author.replace(/[^\w-]/g,'_') : 'unknown';
-    const filename = file.name.endsWith('.html') ? file.name : (file.name + '.html');
+    const folder = author ? toValidFolderName(author) : 'unknown';
+    const filename = toValidFileName(file.name.endsWith('.html') ? file.name : (file.name + '.html'));
     const path = (GH.basePath?GH.basePath+'/':'') + `${folder}/${filename}`;
     try{
       await GH.putFile(path, htmlContent, `Upload ${filename} by admin`);
@@ -679,6 +959,30 @@ async function uploadToGitHub(){
     }
   };
   reader.readAsText(file, 'utf-8');
+}
+
+/* =========================
+   File and Folder Name Validation
+   ========================= */
+function toValidFolderName(name) {
+  // Convert to ASCII, replace spaces and special characters with underscores
+  return name
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '') // Remove diacritics
+    .replace(/[^a-zA-Z0-9_-]/g, '_') // Replace invalid chars with underscore
+    .replace(/_+/g, '_') // Replace multiple underscores with single
+    .replace(/^_|_$/g, ''); // Remove leading/trailing underscores
+}
+
+function toValidFileName(name) {
+  // Similar to folder name but keep file extension
+  const lastDot = name.lastIndexOf('.');
+  if (lastDot === -1) return toValidFolderName(name);
+  
+  const baseName = name.substring(0, lastDot);
+  const extension = name.substring(lastDot);
+  
+  return toValidFolderName(baseName) + extension;
 }
 
 /* =========================
