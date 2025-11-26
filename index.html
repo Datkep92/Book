@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="vi">
 <head>
@@ -119,75 +118,77 @@
             }
 
             async uploadToGitHub(file, author, title, token) {
-    // Tạo folder name từ author
-    const folderName = author.replace(/[^a-zA-Z0-9]/g, '_');
-    const fileName = title.replace(/[^a-zA-Z0-9]/g, '_') + '.html';
-    const filePath = `docs/Quyet/${folderName}/${fileName}`;  // GIỮ NGUYÊN
+                // Tạo folder name từ author
+                const folderName = author.replace(/[^a-zA-Z0-9]/g, '_');
+                const fileName = title.replace(/[^a-zA-Z0-9]/g, '_') + '.html';
+                const filePath = `docs/Quyet/${folderName}/${fileName}`;
 
-    // Đọc file content - XỬ LÝ ENCODING Ở ĐÂY
-    const content = await this.readFileAsText(file);
-    
-    // Fix encoding lỗi tiếng Việt
-    const fixedContent = content
-        .replace(/Ã¡/g, 'á').replace(/Ã /g, 'à')
-        .replace(/Ã¢/g, 'â').replace(/Ã£/g, 'ã')
-        .replace(/Ã©/g, 'é').replace(/Ã¨/g, 'è')
-        .replace(/Ãª/g, 'ê').replace(/Ã­/g, 'í')
-        .replace(/Ã¬/g, 'ì').replace(/Ã³/g, 'ó')
-        .replace(/Ã²/g, 'ò').replace(/Ã´/g, 'ô')
-        .replace(/Ãµ/g, 'õ').replace(/Ãº/g, 'ú')
-        .replace(/Ã¹/g, 'ù').replace(/Ã»/g, 'û')
-        .replace(/Â/g, '');
-
-    // Upload lên GitHub
-    const apiUrl = `https://api.github.com/repos/Datkep92/aquyet/contents/${filePath}`;
-    
-    const payload = {
-        message: `Add: ${title} by ${author}`,
-        content: btoa(unescape(encodeURIComponent(fixedContent))),
-        branch: 'main'
-    };
-
-    const response = await fetch(apiUrl, {
-        method: 'PUT',
-        headers: {
-            'Authorization': `token ${token}`,
-            'Content-Type': 'application/json',
-            'Accept': 'application/vnd.github.v3+json'
-        },
-        body: JSON.stringify(payload)
-    });
-
-    if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || `HTTP ${response.status}`);
-    }
-
-    return await response.json();
-}
-
-            // Xử lý encoding - fix lỗi tiếng Việt
-            fixEncoding(content) {
-                const encodingMap = {
-                    'Ã¡': 'á', 'Ã ': 'à', 'Ã¢': 'â', 'Ã£': 'ã', 'Ã¤': 'ä',
-                    'Ã©': 'é', 'Ã¨': 'è', 'Ãª': 'ê', 'Ã«': 'ë',
-                    'Ã­': 'í', 'Ã¬': 'ì', 'Ã®': 'î', 'Ã¯': 'ï',
-                    'Ã³': 'ó', 'Ã²': 'ò', 'Ã´': 'ô', 'Ãµ': 'õ', 'Ã¶': 'ö',
-                    'Ãº': 'ú', 'Ã¹': 'ù', 'Ã»': 'û', 'Ã¼': 'ü',
-                    'Ã': 'Á', 'Ã€': 'À', 'Ã‚': 'Â', 'Ãƒ': 'Ã', 'Ã„': 'Ä',
-                    'Ã‰': 'É', 'Ãˆ': 'È', 'ÃŠ': 'Ê', 'Ã‹': 'Ë',
-                    'Ã': 'Í', 'ÃŒ': 'Ì', 'ÃŽ': 'Î', 'Ã': 'Ï',
-                    'Ã“': 'Ó', 'Ã’': 'Ò', 'Ã”': 'Ô', 'Ã•': 'Õ', 'Ã–': 'Ö',
-                    'Ãš': 'Ú', 'Ã™': 'Ù', 'Ã›': 'Û', 'Ãœ': 'Ü',
-                    'Ã±': 'ñ', 'Ã': 'Ñ', 'Â': ''
+                // Đọc file và xử lý GIỐNG BookReader
+                const content = await this.readFileAsText(file);
+                const processedContent = this.processContentLikeBookReader(content);
+                
+                // Upload lên GitHub
+                const apiUrl = `https://api.github.com/repos/Datkep92/aquyet/contents/${filePath}`;
+                
+                const payload = {
+                    message: `Add: ${title} by ${author}`,
+                    content: btoa(unescape(encodeURIComponent(processedContent))),
+                    branch: 'main'
                 };
 
-                let fixedContent = content;
-                for (const [wrong, correct] of Object.entries(encodingMap)) {
-                    fixedContent = fixedContent.split(wrong).join(correct);
+                const response = await fetch(apiUrl, {
+                    method: 'PUT',
+                    headers: {
+                        'Authorization': `token ${token}`,
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/vnd.github.v3+json'
+                    },
+                    body: JSON.stringify(payload)
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.message || `HTTP ${response.status}`);
                 }
 
-                return fixedContent;
+                const result = await response.json();
+                return {
+                    html_url: result.content.html_url,
+                    download_url: result.content.download_url,
+                    path: result.content.path
+                };
+            }
+
+            // Xử lý content GIỐNG BookReader
+            processContentLikeBookReader(content) {
+                // Tạo div ảo để xử lý giống BookReader
+                const tempDiv = document.createElement('div');
+                tempDiv.innerHTML = content;
+                
+                // Optimize content GIỐNG BookReader
+                tempDiv.querySelectorAll('img').forEach(img => {
+                    img.style.maxWidth = '100%';
+                    img.style.height = 'auto';
+                    img.loading = 'lazy';
+                });
+                
+                tempDiv.querySelectorAll('table').forEach(table => {
+                    table.style.width = '100%';
+                    table.style.borderCollapse = 'collapse';
+                    table.style.display = 'block';
+                    table.style.overflowX = 'auto';
+                    table.style.maxWidth = '100%';
+                });
+                
+                // Đảm bảo encoding UTF-8
+                let processedContent = tempDiv.innerHTML;
+                if (!processedContent.includes('<meta charset=')) {
+                    if (processedContent.includes('<head>')) {
+                        processedContent = processedContent.replace('<head>', '<head>\n    <meta charset="UTF-8">');
+                    }
+                }
+                
+                return processedContent;
             }
 
             readFileAsText(file) {
