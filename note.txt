@@ -1,0 +1,166 @@
+🎯 Tính năng Đọc & Trải nghiệm
+1. Chế độ đọc ban đêm
+css
+[data-theme="night"] {
+    --bg-primary: #0a0a0a;
+    --text-primary: #e0e0e0;
+    /* Giảm ánh sáng xanh */
+}
+2. Đánh dấu trang & Ghi chú
+Highlight text
+
+Thêm ghi chú cá nhân
+
+Lưu trữ cục bộ
+
+3. Tự động cuộn (Auto-scroll)
+Tốc độ tùy chỉnh
+
+Chạm để tạm dừng/tiếp tục
+
+4. Chuyển văn bản thành giọng nói (TTS)
+javascript
+// Text-to-Speech API
+speakText(text) {
+    const utterance = new SpeechSynthesisUtterance(text);
+    speechSynthesis.speak(utterance);
+}
+📊 Tính năng Quản lý & Phân tích
+5. Thống kê đọc chi tiết
+Thời gian đọc mỗi sách
+
+Tốc độ đọc (từ/phút)
+
+Mục tiêu đọc hàng ngày
+
+6. Hệ thống bookmark thông minh
+Tự động lưu vị trí đọc
+
+Bookmark theo chương
+
+Tìm kiếm bookmark
+
+7. Tủ sách cá nhân
+Sách yêu thích
+
+Bộ sưu tập
+
+Đánh giá sao
+
+🔍 Tính năng Tìm kiếm & Khám phá
+8. Tìm kiếm toàn văn
+Tìm kiếm across tất cả sách
+
+Kết quả với context
+
+Tìm kiếm nâng cao (regex, fuzzy)
+
+9. Gợi ý sách thông minh
+Dựa trên lịch sử đọc
+
+Theo tác giả/từ khóa
+
+Sách cùng thể loại
+
+10. Từ điển tích hợp
+Tra từ nhanh (tap để tra)
+
+Lịch sử từ đã tra
+
+Từ vựng học được
+
+🌐 Tính năng Xã hội & Chia sẻ
+11. Chia sẻ trích dẫn
+Chụp ảnh trích dẫn đẹp
+
+Share lên mạng xã hội
+
+Export highlights
+
+12. Câu lạc bộ sách ảo
+Thảo luận theo chương
+
+Nhóm đọc sách
+
+Đọc cùng nhau
+
+⚡ Tính năng Kỹ thuật
+13. Offline Reading
+Cache sách đã đọc
+
+Sync khi có internet
+
+Quản lý bộ nhớ
+
+14. Import/Export đa định dạng
+EPUB, PDF, TXT support
+
+Convert format
+
+Backup dữ liệu
+
+15. PWA (Progressive Web App)
+Cài đặt như app native
+
+Push notifications
+
+Offline functionality
+
+🎨 Tính năng Giao diện
+16. Custom theme builder
+Tự chọn màu chủ đạo
+
+Font chữ tùy chỉnh
+
+Layout options
+
+17. Chế độ tập trung (Focus Mode)
+Ẩn tất cả UI
+
+Chỉ hiện nội dung
+
+Pomodoro timer tích hợp
+
+18. Animation & Micro-interactions
+Page turn animations
+
+Smooth transitions
+
+Haptic feedback
+
+🔒 Tính năng Bảo mật & Riêng tư
+19. Khóa ứng dụng
+PIN/Pattern lock
+
+Face ID/Touch ID
+
+Ẩn sách nhạy cảm
+
+20. Private reading mode
+Không lưu lịch sử
+
+Ẩn nội dung đang đọc
+
+Xóa nhanh dữ liệu
+
+🚀 Tính năng Cao cấp
+21. AI Book Assistant
+Tóm tắt chương
+
+Đề xuất based on mood
+
+Hỏi đáp về nội dung
+
+22. Reading challenges
+Reading streaks
+
+Achievement badges
+
+Reading goals
+
+23. Cross-platform sync
+Đồng bộ với mobile/desktop
+
+Cloud backup
+
+Continue reading trên mọi device

@@ -1,4 +1,4 @@
-// auth.js - Complete Authentication & Admin Management System
+// auth.js - Complete Authentication & Admin Management System (Updated)
 class AuthSystem {
     constructor() {
         this.currentUser = null;
@@ -6,19 +6,129 @@ class AuthSystem {
         this.ghConfig = null;
         this.users = [];
         this.elements = {};
+        
+        // Admin elements
+        this.adminStats = null;
     }
 
-   initialize(ghConfig, elements) {
-    this.ghConfig = ghConfig;
-    this.elements = elements || {};
-    this.loadLocalAuthState();
-    this.bindAuthEvents();
-    
-    // CẬP NHẬT UI NGAY KHI KHỞI TẠO
-    if (window.bookReader && typeof window.bookReader.updateUIBasedOnRole === 'function') {
-        window.bookReader.updateUIBasedOnRole();
+    initialize(ghConfig, elements) {
+        this.ghConfig = ghConfig;
+        this.elements = elements || {};
+        this.initializeAdminElements();
+        this.loadLocalAuthState();
+        this.bindAuthEvents();
+        
+        // CẬP NHẬT UI NGAY KHI KHỞI TẠO
+        if (window.bookReader && typeof window.bookReader.updateUIBasedOnRole === 'function') {
+            window.bookReader.updateUIBasedOnRole();
+        }
     }
-}
+
+    initializeAdminElements() {
+        this.adminStats = document.getElementById('admin-stats');
+    }
+
+    // Admin & Access Control methods
+    updateUIBasedOnRole() {
+        console.log('🔐 Updating UI based on role, isAdmin:', this.isAdmin);
+        
+        const adminLoginSection = document.getElementById('admin-login-section');
+        const adminPanelSection = document.getElementById('admin-section');
+        const githubSection = document.getElementById('github-section');
+        
+        if (this.isAdmin) {
+            // TRƯỜNG HỢP 1: LÀ ADMIN
+            console.log('👑 Hiển thị cho ADMIN');
+            
+            if (adminLoginSection) adminLoginSection.style.display = 'none';
+            if (adminPanelSection) adminPanelSection.style.display = 'block';
+            if (githubSection) githubSection.style.display = 'block';
+            
+        } else {
+            // TRƯỜNG HỢP 2: KHÔNG PHẢI ADMIN
+            console.log('👤 Hiển thị cho USER THƯỜNG');
+            
+            if (adminLoginSection) adminLoginSection.style.display = 'block';
+            if (adminPanelSection) adminPanelSection.style.display = 'none';
+            if (githubSection) githubSection.style.display = 'none';
+        }
+    }
+
+    async logAccess(action, documentTitle = '') {
+        const deviceId = this.currentUser?.deviceId || 'unknown';
+        
+        const logEntry = {
+            deviceId: deviceId,
+            action: action,
+            document: documentTitle,
+            timestamp: new Date().toISOString(),
+            userAgent: navigator.userAgent
+        };
+        
+        // CHỈ LƯU LOCAL - KHÔNG GỬI GITHUB
+        const accessLogs = JSON.parse(localStorage.getItem('bookreader_access_logs') || '[]');
+        accessLogs.push(logEntry);
+        
+        // Giữ chỉ 1000 bản ghi gần nhất
+        if (accessLogs.length > 1000) {
+            accessLogs.splice(0, accessLogs.length - 1000);
+        }
+        
+        localStorage.setItem('bookreader_access_logs', JSON.stringify(accessLogs));
+        console.log('📊 Logged access (local):', action, documentTitle);
+    }
+
+    loadAccessStats() {
+        const accessLogs = JSON.parse(localStorage.getItem('bookreader_access_logs') || '[]');
+        
+        // Tính toán stats từ local data
+        const stats = this.calculateLocalStats(accessLogs);
+        
+        if (this.adminStats) {
+            this.adminStats.innerHTML = `
+                <div class="stat-item">
+                    <span class="stat-label">Truy cập local:</span>
+                    <span class="stat-value">${stats.totalAccess}</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">Sách đã xem:</span>
+                    <span class="stat-value">${stats.uniqueDocuments}</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">Lần cuối:</span>
+                    <span class="stat-value">${stats.lastAccess}</span>
+                </div>
+                <div class="document-stats">
+                    <h4>Sách đã đọc:</h4>
+                    ${stats.documentStats.map(doc => `
+                        <div class="doc-stat-item">
+                            <span class="doc-name">${doc.document}</span>
+                            <span class="doc-views">${doc.views} lượt</span>
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+        }
+    }
+
+    calculateLocalStats(accessLogs) {
+        const uniqueDocuments = [...new Set(accessLogs.map(log => log.document).filter(Boolean))];
+        const documentStats = uniqueDocuments.map(doc => {
+            const views = accessLogs.filter(log => log.document === doc).length;
+            return { document: doc, views: views };
+        });
+        
+        const lastAccess = accessLogs.length > 0 ? 
+            new Date(accessLogs[accessLogs.length - 1].timestamp).toLocaleDateString('vi-VN') : 
+            'Chưa có';
+        
+        return {
+            totalAccess: accessLogs.length,
+            uniqueDocuments: uniqueDocuments.length,
+            lastAccess: lastAccess,
+            documentStats: documentStats
+        };
+    }
 
     // Load trạng thái auth từ localStorage
     loadLocalAuthState() {

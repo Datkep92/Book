@@ -9,13 +9,24 @@
 <body>
     <!-- Sidebar Menu -->
     <div class="sidebar" id="sidebar">
-        <div class="sidebar-header">
-            <h2>📖 BookReader</h2>
+        <div class="sidebar-header" id="sidebar-header">
+            <h2>Mục lục</h2>
             <div class="sidebar-controls">
-                <button class="sidebar-settings-btn" id="sidebar-settings-btn" title="Cài đặt">
-                    <span class="settings-icon">⚙️</span>
-                </button>
+                <!-- Nút admin sẽ được thêm vào đây -->
+                <button class="sidebar-settings-btn" id="sidebar-settings-btn">⚙️</button>
                 <button class="close-menu-btn" id="close-menu-btn">✕</button>
+            </div>
+        </div>
+
+        <!-- Thêm phần admin controls - CHỈ 1 PHẦN -->
+        <div class="documents-admin-controls admin-only" style="display: none;">
+            <div class="admin-controls-header">
+                <h4>Quản lý bài viết</h4>
+                <button id="exit-admin-mode" class="admin-btn secondary">Thoát</button>
+            </div>
+            <div class="admin-controls-buttons">
+                <button id="add-new-doc" class="admin-btn">➕ Thêm mới</button>
+                <button id="save-changes" class="admin-btn primary">💾 Lưu thay đổi</button>
             </div>
         </div>
         
@@ -119,7 +130,7 @@
     </div>
 
    <!-- Settings Panel -->
-<div class="settings-panel active" id="settings-panel">
+<div class="settings-panel" id="settings-panel"> <!-- ĐÃ XÓA CLASS ACTIVE -->
     <div class="settings-header">
         <h3>Cài đặt đọc</h3>
         <button class="close-settings-btn" id="close-settings-btn">✕</button>
@@ -134,6 +145,7 @@
                 <option value="1.2">Rất lớn</option>
             </select>
         </div>
+        
         <div class="setting-item">
             <label for="theme">Chủ đề:</label>
             <select id="theme">
@@ -208,6 +220,10 @@
                     <input type="text" id="book-title-input" placeholder="Tiêu đề sách">
                 </div>
                 <div class="form-group">
+                    <label for="book-description">Miêu tả ngắn:</label>
+                    <textarea id="book-description" placeholder="Nhập miêu tả ngắn về sách..." rows="3" style="width: 100%; padding: 10px; border: 1px solid var(--border-color); border-radius: var(--radius); background: var(--bg-primary); color: var(--text-primary); font-size: 0.85rem; resize: vertical;"></textarea>
+                </div>
+                <div class="form-group">
                     <label for="file-input">File HTML:</label>
                     <input type="file" id="file-input" accept=".html,.htm">
                 </div>
@@ -217,15 +233,15 @@
                 </button>
             </div>
 
-<div class="stats-section">
-    <h5>📊 Thống kê truy cập (LOCAL)</h5>
-    <p style="font-size: 12px; color: #666; margin-bottom: 10px;">
-        💡 chưa Buid
-    </p>
-    <div class="admin-stats" id="admin-stats">
-        <!-- Stats will be loaded here -->
-    </div>
-</div>
+            <div class="stats-section">
+                <h5>📊 Thống kê truy cập (LOCAL)</h5>
+                <p style="font-size: 12px; color: #666; margin-bottom: 10px;">
+                    💡 chưa Buid
+                </p>
+                <div class="admin-stats" id="admin-stats">
+                    <!-- Stats will be loaded here -->
+                </div>
+            </div>
 
             <!-- User Management -->
             <div class="user-management-section" id="user-management-section">
@@ -240,37 +256,17 @@
         </div>
     </div>
 </div>
-<!-- Registration Modal -->
-<div class="registration-modal" id="registration-modal" style="display: none;">
-    <div class="registration-content">
-        <div class="registration-header">
-            <h3>📱 Đăng ký thiết bị mới</h3>
-        </div>
-        <div class="registration-body">
-            <p>Vui lòng nhập thông tin của bạn để tiếp tục sử dụng ứng dụng</p>
-            <div class="form-group">
-                <label for="user-name">Họ và tên:</label>
-                <input type="text" id="user-name" placeholder="Nhập họ và tên" required>
-            </div>
-            <div class="form-group">
-                <label for="user-phone">Số điện thoại:</label>
-                <input type="tel" id="user-phone" placeholder="Nhập số điện thoại" required>
-            </div>
-            <div class="registration-buttons">
-                <button type="button" class="registration-btn" id="registration-submit-btn">
-                    Đăng ký và tiếp tục
-                </button>
-            </div>
-        </div>
-    </div>
-</div>
+
     <!-- Loading Overlay -->
     <div class="loading-overlay" id="loading-overlay">
         <div class="loading-spinner"></div>
         <p>Đang tải sách...</p>
     </div>
 
-    <script src="app.js"></script>
     <script src="auth.js"></script>
+    <script src="sidebar.js"></script>
+    <script src="github-manager.js"></script>
+    <script src="file-manager.js"></script>
+    <script src="app.js"></script>
 </body>
 </html>
