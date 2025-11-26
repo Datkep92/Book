@@ -4,20 +4,25 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Upload File lên GitHub - Đã Xử Lý Encoding</title>
+    <title>Upload File lên GitHub</title>
 </head>
 <body>
     <div style="max-width: 600px; margin: 50px auto; padding: 20px;">
-        <h1>📤 Upload File lên GitHub (Đã Xử Lý Encoding)</h1>
+        <h1>📤 Upload File lên GitHub</h1>
         <p><strong>Repo:</strong> Datkep92/aquyet</p>
-        <p><strong>Path:</strong> docs/Quyet/processed/</p>
+        <p><strong>Path:</strong> docs/Quyet/</p>
         
         <form id="uploadForm" style="margin-top: 20px;">
             <div style="margin-bottom: 15px;">
-                <label><strong>Tên File (trên GitHub):</strong></label><br>
-                <input type="text" id="fileName" placeholder="book.html" required 
+                <label><strong>Tên Tác Giả:</strong></label><br>
+                <input type="text" id="authorName" placeholder="Nhập tên tác giả" required 
                        style="width: 100%; padding: 8px; margin-top: 5px;">
-                <small style="color: #666;">Ví dụ: book.html, chapter1.html</small>
+            </div>
+
+            <div style="margin-bottom: 15px;">
+                <label><strong>Tiêu Đề Sách:</strong></label><br>
+                <input type="text" id="bookTitle" placeholder="Nhập tiêu đề sách" required 
+                       style="width: 100%; padding: 8px; margin-top: 5px;">
             </div>
 
             <div style="margin-bottom: 15px;">
@@ -28,47 +33,30 @@
 
             <div style="margin-bottom: 15px;">
                 <label><strong>Chọn File HTML:</strong></label><br>
-                <input type="file" id="fileInput" accept=".html,.htm,.txt" required 
+                <input type="file" id="fileInput" accept=".html,.htm" required 
                        style="margin-top: 5px;">
-                <div id="fileInfo" style="margin-top: 5px; color: #666;"></div>
-            </div>
-
-            <div style="margin-bottom: 15px; padding: 10px; background: #f8f9fa; border-radius: 5px;">
-                <label style="display: flex; align-items: center; gap: 8px;">
-                    <input type="checkbox" id="autoProcess" checked>
-                    <strong>Tự động xử lý encoding (Windows-1252 → UTF-8)</strong>
-                </label>
-                <small style="color: #666; display: block; margin-top: 5px;">
-                    File sẽ được xử lý encoding trước khi upload lên GitHub
-                </small>
+                <div id="fileName" style="margin-top: 5px; color: #666;"></div>
             </div>
 
             <button type="submit" id="uploadBtn" 
                     style="width: 100%; padding: 12px; background: #28a745; color: white; border: none; cursor: pointer;">
-                🚀 Xử Lý & Upload lên GitHub
+                🚀 Upload lên GitHub
             </button>
         </form>
 
         <div id="loading" style="display: none; text-align: center; margin: 20px 0;">
-            <p>🔄 Đang xử lý file và upload lên GitHub...</p>
+            <p>🔄 Đang upload file lên GitHub...</p>
         </div>
 
-        <div id="successResult" style="display: none; background: #d4edda; color: #155724; padding: 15px; margin-top: 20px; border-radius: 5px;">
+        <div id="successResult" style="display: none; background: #d4edda; color: #155724; padding: 15px; margin-top: 20px;">
             <h3>✅ Upload Thành Công!</h3>
             <p id="successMessage"></p>
             <p><strong>📁 Link:</strong> <a id="fileLink" target="_blank"></a></p>
-            <p><strong>📥 Raw URL:</strong> <a id="rawLink" target="_blank"></a></p>
         </div>
 
-        <div id="errorResult" style="display: none; background: #f8d7da; color: #721c24; padding: 15px; margin-top: 20px; border-radius: 5px;">
+        <div id="errorResult" style="display: none; background: #f8d7da; color: #721c24; padding: 15px; margin-top: 20px;">
             <h3>❌ Lỗi Upload</h3>
             <p id="errorMessage"></p>
-        </div>
-
-        <!-- Preview Section -->
-        <div id="previewSection" style="display: none; margin-top: 20px; padding: 15px; background: #f8f9fa; border-radius: 5px;">
-            <h3>👁️ Preview (Sau khi xử lý)</h3>
-            <div id="previewContent" style="max-height: 200px; overflow-y: auto; background: white; padding: 10px; border: 1px solid #ddd; margin-top: 10px; font-family: monospace; font-size: 12px;"></div>
         </div>
     </div>
 
@@ -82,38 +70,28 @@
             initializeElements() {
                 this.form = document.getElementById('uploadForm');
                 this.fileInput = document.getElementById('fileInput');
-                this.fileInfo = document.getElementById('fileInfo');
-                this.fileNameInput = document.getElementById('fileName');
+                this.fileName = document.getElementById('fileName');
+                this.authorName = document.getElementById('authorName');
+                this.bookTitle = document.getElementById('bookTitle');
                 this.githubToken = document.getElementById('githubToken');
                 this.uploadBtn = document.getElementById('uploadBtn');
-                this.autoProcess = document.getElementById('autoProcess');
                 this.loading = document.getElementById('loading');
                 this.successResult = document.getElementById('successResult');
                 this.errorResult = document.getElementById('errorResult');
                 this.successMessage = document.getElementById('successMessage');
                 this.errorMessage = document.getElementById('errorMessage');
                 this.fileLink = document.getElementById('fileLink');
-                this.rawLink = document.getElementById('rawLink');
-                this.previewSection = document.getElementById('previewSection');
-                this.previewContent = document.getElementById('previewContent');
             }
 
             bindEvents() {
                 this.form.addEventListener('submit', (e) => this.handleSubmit(e));
                 this.fileInput.addEventListener('change', (e) => this.handleFileSelect(e));
-                this.autoProcess.addEventListener('change', () => this.togglePreview());
             }
 
             handleFileSelect(e) {
                 const file = e.target.files[0];
                 if (file) {
-                    this.fileInfo.textContent = `📄 File: ${file.name} (${this.formatFileSize(file.size)})`;
-                    // Tự động điền tên file nếu chưa có
-                    if (!this.fileNameInput.value) {
-                        const nameWithoutExt = file.name.replace(/\.[^/.]+$/, "");
-                        this.fileNameInput.value = nameWithoutExt + '.html';
-                    }
-                    this.togglePreview();
+                    this.fileName.textContent = `📄 File: ${file.name}`;
                 }
             }
 
@@ -121,10 +99,11 @@
                 e.preventDefault();
                 
                 const file = this.fileInput.files[0];
-                const fileName = this.fileNameInput.value.trim();
+                const author = this.authorName.value.trim();
+                const title = this.bookTitle.value.trim();
                 const token = this.githubToken.value.trim();
 
-                if (!file || !fileName || !token) {
+                if (!file || !author || !title || !token) {
                     this.showError('Vui lòng điền đầy đủ thông tin!');
                     return;
                 }
@@ -132,115 +111,29 @@
                 this.showLoading();
 
                 try {
-                    const result = await this.processAndUpload(file, fileName, token);
+                    const result = await this.uploadToGitHub(file, author, title, token);
                     this.showSuccess(result);
                 } catch (error) {
                     this.showError(error.message);
                 }
             }
 
-            async processAndUpload(file, fileName, token) {
-                // Bước 1: Đọc file
-                const originalContent = await this.readFileAsText(file);
+            async uploadToGitHub(file, author, title, token) {
+                // Tạo folder name từ author
+                const folderName = author.replace(/[^a-zA-Z0-9]/g, '_');
+                const fileName = title.replace(/[^a-zA-Z0-9]/g, '_') + '.html';
+                const filePath = `docs/Quyet/${folderName}/${fileName}`;
+
+                // Đọc file content và xử lý encoding
+                const content = await this.readFileAsText(file);
+                const processedContent = this.fixEncoding(content);
                 
-                // Bước 2: Xử lý encoding nếu được chọn
-                let processedContent = originalContent;
-                if (this.autoProcess.checked) {
-                    processedContent = this.fixEncoding(originalContent);
-                    processedContent = this.optimizeContent(processedContent);
-                }
-
-                // Bước 3: Upload lên GitHub
-                const filePath = `docs/Quyet/processed/${fileName}`;
-                const result = await this.uploadToGitHub(processedContent, filePath, token, file.name);
-                
-                return {
-                    ...result,
-                    processedContent: processedContent,
-                    originalLength: originalContent.length,
-                    processedLength: processedContent.length
-                };
-            }
-
-            // Xử lý encoding từ Windows-1252 sang UTF-8
-            fixEncoding(content) {
-                console.log('🔧 Đang xử lý encoding...');
-                
-                // Map các ký tự Windows-1252 bị lỗi sang UTF-8 chuẩn
-                const encodingMap = {
-                    // Vietnamese characters
-                    'Ã¡': 'á', 'Ã ': 'à', 'áº¡': 'ạ', 'áº£': 'ả', 'Ã£': 'ã', 'Ã¢': 'â', 'áº§': 'ầ', 'áº¥': 'ấ', 'áº­': 'ậ', 'áº©': 'ẩ', 'áº«': 'ẫ',
-                    'Ã©': 'é', 'Ã¨': 'è', 'áº¹': 'ẹ', 'áº»': 'ẻ', 'áº½': 'ẽ', 'Ãª': 'ê', 'á»': 'ề', 'áº¿': 'ế', 'á»‡': 'ệ', 'á»ƒ': 'ể', 'á»…': 'ễ',
-                    'Ã­': 'í', 'Ã¬': 'ì', 'á»‹': 'ị', 'á»‰': 'ỉ', 'Ä©': 'ĩ',
-                    'Ã³': 'ó', 'Ã²': 'ò', 'á»': 'ọ', 'á»': 'ỏ', 'Ãµ': 'õ', 'Ã´': 'ô', 'á»“': 'ồ', 'á»‘': 'ố', 'á»™': 'ộ', 'á»•': 'ổ', 'á»—': 'ỗ',
-                    'Ãº': 'ú', 'Ã¹': 'ù', 'á»¥': 'ụ', 'á»§': 'ủ', 'Å©': 'ũ', 'Ã°': 'ư', 'á»«': 'ừ', 'á»©': 'ứ', 'á»±': 'ự', 'á»­': 'ử', 'á»¯': 'ữ',
-                    'á»¹': 'ỵ', 'á»³': 'ỳ', 'á»·': 'ỷ', 'á»·': 'ỹ',
-                    
-                    // Uppercase Vietnamese
-                    'Ã': 'Á', 'Ã€': 'À', 'áº ': 'Ạ', 'áº¢': 'Ả', 'Ãƒ': 'Ã', 'Ã‚': 'Â', 'áº¦': 'Ầ', 'áº¤': 'Ấ', 'áº®': 'Ậ', 'áº¨': 'Ẩ', 'áºª': 'Ẫ',
-                    'Ã‰': 'É', 'Ãˆ': 'È', 'áº°': 'Ẹ', 'áºº': 'Ẻ', 'áº¼': 'Ẽ', 'ÃŠ': 'Ê', 'á»€': 'Ề', 'áº¾': 'Ế', 'á»…': 'Ệ', 'á»‚': 'Ể', 'á»„': 'Ễ',
-                    'Ã': 'Í', 'ÃŒ': 'Ì', 'á»Š': 'Ị', 'á»ˆ': 'Ỉ', 'Ä¨': 'Ĩ',
-                    'Ã“': 'Ó', 'Ã’': 'Ò', 'á»Œ': 'Ọ', 'á»Ž': 'Ỏ', 'Ã•': 'Õ', 'Ã”': 'Ô', 'á»“': 'Ồ', 'á»': 'Ố', 'á»œ': 'Ộ', 'á»”': 'Ổ', 'á»–': 'Ỗ',
-                    'Ãš': 'Ú', 'Ã™': 'Ù', 'á»¤': 'Ụ', 'á»¦': 'Ủ', 'Å¨': 'Ũ', 'Ãž': 'Ư', 'á»ª': 'Ừ', 'á»¨': 'Ứ', 'á»°': 'Ự', 'á»¬': 'Ử', 'á»®': 'Ữ',
-                    
-                    // Common special characters
-                    'â€': '"', 'â€œ': '"', 'â€™': "'", 'â€¦': '...',
-                    'Ã§': 'ç', 'Ã‡': 'Ç',
-                    'Ã±': 'ñ', 'Ã‘': 'Ñ',
-                    'Â': '', // Remove extra Â characters
-                    
-                    // Fix common mojibake
-                    'Æ¡': 'ơ', 'Æ¯': 'ư',
-                    'â»': 'ỳ', 'â»': 'ỵ', 'â»‡': 'ỷ', 'â»‰': 'ỹ'
-                };
-
-                let fixedContent = content;
-                
-                // Thay thế các ký tự lỗi
-                for (const [wrong, correct] of Object.entries(encodingMap)) {
-                    const regex = new RegExp(wrong, 'g');
-                    fixedContent = fixedContent.replace(regex, correct);
-                }
-
-                // Fix additional common patterns
-                fixedContent = fixedContent.replace(/ÃÂ¡/g, 'á');
-                fixedContent = fixedContent.replace(/ÃÂ /g, 'à');
-                fixedContent = fixedContent.replace(/ÃÂ©/g, 'é');
-                
-                console.log('✅ Encoding đã được xử lý');
-                return fixedContent;
-            }
-
-            // Tối ưu hóa nội dung HTML
-            optimizeContent(content) {
-                console.log('🔧 Đang tối ưu hóa nội dung...');
-                
-                // Đảm bảo meta charset UTF-8
-                if (!content.includes('<meta charset=')) {
-                    if (content.includes('<head>')) {
-                        content = content.replace('<head>', '<head>\n    <meta charset="UTF-8">');
-                    } else if (content.includes('<html>')) {
-                        content = content.replace('<html>', '<html>\n<head>\n    <meta charset="UTF-8">\n</head>');
-                    } else {
-                        content = '<!DOCTYPE html>\n<html>\n<head>\n    <meta charset="UTF-8">\n    <meta name="viewport" content="width=device-width, initial-scale=1.0">\n</head>\n<body>\n' + content + '\n</body>\n</html>';
-                    }
-                }
-
-                // Đảm bảo viewport meta
-                if (!content.includes('viewport')) {
-                    content = content.replace('<head>', '<head>\n    <meta name="viewport" content="width=device-width, initial-scale=1.0">');
-                }
-
-                console.log('✅ Nội dung đã được tối ưu hóa');
-                return content;
-            }
-
-            async uploadToGitHub(content, filePath, token, originalFileName) {
+                // Upload lên GitHub
                 const apiUrl = `https://api.github.com/repos/Datkep92/aquyet/contents/${filePath}`;
                 
                 const payload = {
-                    message: `Auto-processed: ${originalFileName} -> ${filePath.split('/').pop()}`,
-                    content: btoa(unescape(encodeURIComponent(content))),
+                    message: `Add: ${title} by ${author}`,
+                    content: btoa(unescape(encodeURIComponent(processedContent))),
                     branch: 'main'
                 };
 
@@ -263,9 +156,32 @@
                 return {
                     html_url: result.content.html_url,
                     download_url: result.content.download_url,
-                    path: result.content.path,
-                    raw_url: `https://raw.githubusercontent.com/Datkep92/aquyet/main/${filePath}`
+                    path: result.content.path
                 };
+            }
+
+            // Xử lý encoding - fix lỗi tiếng Việt
+            fixEncoding(content) {
+                const encodingMap = {
+                    'Ã¡': 'á', 'Ã ': 'à', 'Ã¢': 'â', 'Ã£': 'ã', 'Ã¤': 'ä',
+                    'Ã©': 'é', 'Ã¨': 'è', 'Ãª': 'ê', 'Ã«': 'ë',
+                    'Ã­': 'í', 'Ã¬': 'ì', 'Ã®': 'î', 'Ã¯': 'ï',
+                    'Ã³': 'ó', 'Ã²': 'ò', 'Ã´': 'ô', 'Ãµ': 'õ', 'Ã¶': 'ö',
+                    'Ãº': 'ú', 'Ã¹': 'ù', 'Ã»': 'û', 'Ã¼': 'ü',
+                    'Ã': 'Á', 'Ã€': 'À', 'Ã‚': 'Â', 'Ãƒ': 'Ã', 'Ã„': 'Ä',
+                    'Ã‰': 'É', 'Ãˆ': 'È', 'ÃŠ': 'Ê', 'Ã‹': 'Ë',
+                    'Ã': 'Í', 'ÃŒ': 'Ì', 'ÃŽ': 'Î', 'Ã': 'Ï',
+                    'Ã“': 'Ó', 'Ã’': 'Ò', 'Ã”': 'Ô', 'Ã•': 'Õ', 'Ã–': 'Ö',
+                    'Ãš': 'Ú', 'Ã™': 'Ù', 'Ã›': 'Û', 'Ãœ': 'Ü',
+                    'Ã±': 'ñ', 'Ã': 'Ñ', 'Â': ''
+                };
+
+                let fixedContent = content;
+                for (const [wrong, correct] of Object.entries(encodingMap)) {
+                    fixedContent = fixedContent.split(wrong).join(correct);
+                }
+
+                return fixedContent;
             }
 
             readFileAsText(file) {
@@ -273,50 +189,14 @@
                     const reader = new FileReader();
                     reader.onload = e => resolve(e.target.result);
                     reader.onerror = reject;
-                    // Đọc với encoding mặc định (giống browser xử lý)
                     reader.readAsText(file);
                 });
-            }
-
-            togglePreview() {
-                const file = this.fileInput.files[0];
-                if (file && this.autoProcess.checked) {
-                    this.generatePreview(file);
-                } else {
-                    this.previewSection.style.display = 'none';
-                }
-            }
-
-            async generatePreview(file) {
-                try {
-                    const content = await this.readFileAsText(file);
-                    const processedContent = this.fixEncoding(content);
-                    
-                    // Hiển thị preview (300 ký tự đầu)
-                    const preview = processedContent.substring(0, 300) + 
-                                  (processedContent.length > 300 ? '...' : '');
-                    
-                    this.previewContent.textContent = preview;
-                    this.previewSection.style.display = 'block';
-                    
-                } catch (error) {
-                    console.error('Lỗi generate preview:', error);
-                }
-            }
-
-            formatFileSize(bytes) {
-                if (bytes === 0) return '0 Bytes';
-                const k = 1024;
-                const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-                const i = Math.floor(Math.log(bytes) / Math.log(k));
-                return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
             }
 
             showLoading() {
                 this.loading.style.display = 'block';
                 this.successResult.style.display = 'none';
                 this.errorResult.style.display = 'none';
-                this.previewSection.style.display = 'none';
                 this.uploadBtn.disabled = true;
             }
 
@@ -327,22 +207,15 @@
 
             showSuccess(result) {
                 this.hideLoading();
-                this.successMessage.textContent = 
-                    `Đã xử lý và upload "${this.fileInput.files[0].name}" thành công! 
-                     (${result.originalLength} → ${result.processedLength} ký tự)`;
+                this.successMessage.textContent = `Đã upload "${this.bookTitle.value}" thành công!`;
                 this.fileLink.href = result.html_url;
                 this.fileLink.textContent = result.html_url;
-                this.rawLink.href = result.raw_url;
-                this.rawLink.textContent = result.raw_url;
                 this.successResult.style.display = 'block';
                 this.errorResult.style.display = 'none';
                 
-                // Reset form nhưng giữ token
-                const token = this.githubToken.value;
+                // Reset form
                 this.form.reset();
-                this.githubToken.value = token;
-                this.fileInfo.textContent = '';
-                this.previewSection.style.display = 'none';
+                this.fileName.textContent = '';
             }
 
             showError(message) {
