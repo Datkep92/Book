@@ -1,4 +1,5 @@
-  /* CSS Reset và Base Styles */
+
+        /* CSS Reset và Base Styles */
         * {
             margin: 0;
             padding: 0;
@@ -1042,3 +1043,435 @@
                 background: var(--bg-secondary);
             }
         }
+/* Sidebar Navigation */
+.sidebar-nav {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 20px;
+    border-bottom: 1px solid var(--border-color);
+    background: var(--bg-primary);
+}
+
+.back-btn {
+    background: var(--primary-color);
+    color: white;
+    border: none;
+    padding: 8px 16px;
+    border-radius: var(--radius);
+    font-size: 0.9rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: var(--transition);
+}
+
+.back-btn:hover {
+    background: var(--primary-dark);
+}
+
+.page-title {
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+/* Documents Search */
+.documents-search-container {
+    position: relative;
+    margin: 0 16px 16px 16px;
+}
+
+.documents-search-input {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius);
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    font-size: 0.85rem;
+}
+
+.documents-search-input:focus {
+    outline: none;
+    border-color: var(--primary-color);
+}
+
+.documents-search-results {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background: var(--bg-primary);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    max-height: 200px;
+    overflow-y: auto;
+    z-index: 1001;
+    display: none;
+}
+
+.documents-search-result {
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--border-color);
+    cursor: pointer;
+    font-size: 0.8rem;
+    transition: var(--transition);
+}
+
+.documents-search-result:hover {
+    background: var(--bg-secondary);
+}
+
+.documents-search-result:last-child {
+    border-bottom: none;
+}
+
+.document-search-title {
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 4px;
+    font-size: 0.85rem;
+}
+
+.document-search-author {
+    color: var(--text-secondary);
+    font-size: 0.75rem;
+}
+
+/* Registration Modal */
+.registration-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.8);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+}
+
+.registration-content {
+    background: var(--bg-primary);
+    border-radius: var(--radius);
+    padding: 24px;
+    width: 90%;
+    max-width: 400px;
+    box-shadow: var(--shadow);
+}
+
+.registration-header h3 {
+    margin-bottom: 16px;
+    color: var(--text-primary);
+    text-align: center;
+}
+
+.registration-body p {
+    margin-bottom: 20px;
+    color: var(--text-secondary);
+    text-align: center;
+}
+
+.registration-buttons {
+    margin-top: 20px;
+}
+
+.registration-btn {
+    width: 100%;
+    padding: 12px;
+    background: var(--primary-color);
+    color: white;
+    border: none;
+    border-radius: var(--radius);
+    font-size: 1rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: var(--transition);
+}
+
+.registration-btn:hover {
+    background: var(--primary-dark);
+}
+
+/* User Management */
+.user-management-section {
+    background: var(--bg-primary);
+    padding: 15px;
+    border-radius: var(--radius);
+    border: 1px solid var(--border-color);
+    margin-bottom: 20px;
+}
+
+.user-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.user-item:last-child {
+    border-bottom: none;
+}
+
+.user-info {
+    flex: 1;
+}
+
+.user-name {
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 4px;
+}
+
+.user-meta {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+}
+
+.user-actions {
+    display: flex;
+    gap: 8px;
+}
+
+.grant-btn, .revoke-btn {
+    padding: 6px 12px;
+    border: none;
+    border-radius: var(--radius);
+    font-size: 0.8rem;
+    cursor: pointer;
+    transition: var(--transition);
+}
+
+.grant-btn {
+    background: var(--primary-color);
+    color: white;
+}
+
+.revoke-btn {
+    background: #dc2626;
+    color: white;
+}
+
+.grant-btn:hover, .revoke-btn:hover {
+    opacity: 0.9;
+}
+
+.no-users {
+    padding: 20px;
+    text-align: center;
+    color: var(--text-secondary);
+    font-style: italic;
+}
+
+/* Thêm vào style.css */
+.admin-only {
+    /* Mặc định ẩn, sẽ được hiển thị bằng JavaScript khi là admin */
+    display: none;
+}
+
+/* GitHub section styling */
+.github-section {
+    margin-top: 20px;
+    padding-top: 20px;
+    border-top: 1px solid var(--border-color);
+}
+
+.github-section h4 {
+    margin-bottom: 15px;
+    color: var(--text-primary);
+}
+
+.github-buttons {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-top: 15px;
+}
+
+.github-btn {
+    padding: 8px 16px;
+    border: none;
+    border-radius: 6px;
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+    cursor: pointer;
+    font-size: 14px;
+    transition: background 0.2s;
+}
+
+.github-btn.primary {
+    background: #4f46e5;
+    color: white;
+}
+
+.github-btn.secondary {
+    background: #6b7280;
+    color: white;
+}
+
+.github-btn:hover {
+    opacity: 0.9;
+}
+
+/* Thêm vào style.css */
+.admin-login-section {
+    margin-top: 20px;
+    padding-top: 20px;
+    border-top: 1px solid var(--border-color);
+}
+
+.admin-login-section h4 {
+    margin-bottom: 15px;
+    color: var(--text-primary);
+}
+
+.admin-buttons {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.admin-btn {
+    padding: 10px 16px;
+    border: none;
+    border-radius: 6px;
+    background: #4f46e5;
+    color: white;
+    cursor: pointer;
+    font-size: 14px;
+    transition: background 0.2s;
+}
+
+.admin-btn.logout {
+    background: #dc2626;
+}
+
+.admin-btn:hover {
+    opacity: 0.9;
+}
+
+/* GitHub section vẫn là admin-only */
+.github-section.admin-only {
+    display: none;
+}
+
+/* Admin section vẫn là admin-only */
+.admin-section.admin-only {
+    display: none;
+}
+
+/* Thêm vào style.css - TOC phân cấp */
+.toc-item {
+    position: relative;
+    margin: 2px 0;
+}
+
+.toc-line {
+    display: flex;
+    align-items: center;
+    min-height: 32px;
+}
+
+.toc-toggle {
+    width: 16px;
+    height: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-size: 10px;
+    color: var(--text-secondary);
+    margin-right: 4px;
+    transition: transform 0.2s;
+    user-select: none;
+}
+
+.toc-toggle-spacer {
+    width: 16px;
+    height: 16px;
+    margin-right: 4px;
+}
+
+.toc-item.expanded .toc-toggle {
+    transform: rotate(90deg);
+}
+
+.toc-children {
+    margin-left: 20px;
+    border-left: 1px solid var(--border-color);
+    padding-left: 8px;
+}
+
+.toc-link {
+    display: flex;
+    align-items: center;
+    padding: 6px 8px;
+    text-decoration: none;
+    color: var(--text-primary);
+    border-radius: 4px;
+    transition: background-color 0.2s;
+    flex: 1;
+}
+
+.toc-link:hover {
+    background-color: var(--bg-secondary);
+}
+
+.toc-icon {
+    margin-right: 8px;
+    font-size: 14px;
+}
+
+.toc-text {
+    flex: 1;
+    font-size: 14px;
+    line-height: 1.4;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* Phân biệt các cấp độ */
+.toc-link.level-1 {
+    font-weight: 600;
+    font-size: 15px;
+}
+
+.toc-link.level-2 {
+    font-weight: 500;
+    font-size: 14px;
+}
+
+.toc-link.level-3 {
+    font-weight: 400;
+    font-size: 14px;
+    color: var(--text-secondary);
+}
+
+.toc-link.level-4,
+.toc-link.level-5,
+.toc-link.level-6 {
+    font-weight: 300;
+    font-size: 13px;
+    color: var(--text-tertiary);
+}
+
+.toc-highlight {
+    background-color: #fff3cd !important;
+    border-left: 4px solid #ffc107 !important;
+    padding-left: 8px !important;
+    transition: all 0.3s ease;
+}
+
+.toc-highlight {
+    background: linear-gradient(120deg, #a8edea 0%, #fed6e3 100%) !important;
+    border-left: 4px solid #667eea !important;
+    padding: 8px 12px !important;
+    margin: 4px 0 !important;
+    border-radius: 4px !important;
+    transition: all 0.3s ease !important;
+    box-shadow: 0 2px 8px rgba(102, 126, 234, 0.2) !important;
+}
