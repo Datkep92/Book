@@ -119,46 +119,52 @@
             }
 
             async uploadToGitHub(file, author, title, token) {
-                // Tạo folder name từ author
-                const folderName = author.replace(/[^a-zA-Z0-9]/g, '_');
-                const fileName = title.replace(/[^a-zA-Z0-9]/g, '_') + '.html';
-                const filePath = `docs/Quyet/${fileName}`;
+    // Tạo folder name từ author
+    const folderName = author.replace(/[^a-zA-Z0-9]/g, '_');
+    const fileName = title.replace(/[^a-zA-Z0-9]/g, '_') + '.html';
+    const filePath = `docs/Quyet/${folderName}/${fileName}`;  // GIỮ NGUYÊN
 
-                // Đọc file content và xử lý encoding
-                const content = await this.readFileAsText(file);
-                const processedContent = this.fixEncoding(content);
-                
-                // Upload lên GitHub
-                const apiUrl = `https://api.github.com/repos/Datkep92/aquyet/contents/${filePath}`;
-                
-                const payload = {
-                    message: `Add: ${title} by ${author}`,
-                    content: btoa(unescape(encodeURIComponent(processedContent))),
-                    branch: 'main'
-                };
+    // Đọc file content - XỬ LÝ ENCODING Ở ĐÂY
+    const content = await this.readFileAsText(file);
+    
+    // Fix encoding lỗi tiếng Việt
+    const fixedContent = content
+        .replace(/Ã¡/g, 'á').replace(/Ã /g, 'à')
+        .replace(/Ã¢/g, 'â').replace(/Ã£/g, 'ã')
+        .replace(/Ã©/g, 'é').replace(/Ã¨/g, 'è')
+        .replace(/Ãª/g, 'ê').replace(/Ã­/g, 'í')
+        .replace(/Ã¬/g, 'ì').replace(/Ã³/g, 'ó')
+        .replace(/Ã²/g, 'ò').replace(/Ã´/g, 'ô')
+        .replace(/Ãµ/g, 'õ').replace(/Ãº/g, 'ú')
+        .replace(/Ã¹/g, 'ù').replace(/Ã»/g, 'û')
+        .replace(/Â/g, '');
 
-                const response = await fetch(apiUrl, {
-                    method: 'PUT',
-                    headers: {
-                        'Authorization': `token ${token}`,
-                        'Content-Type': 'application/json',
-                        'Accept': 'application/vnd.github.v3+json'
-                    },
-                    body: JSON.stringify(payload)
-                });
+    // Upload lên GitHub
+    const apiUrl = `https://api.github.com/repos/Datkep92/aquyet/contents/${filePath}`;
+    
+    const payload = {
+        message: `Add: ${title} by ${author}`,
+        content: btoa(unescape(encodeURIComponent(fixedContent))),
+        branch: 'main'
+    };
 
-                if (!response.ok) {
-                    const errorData = await response.json();
-                    throw new Error(errorData.message || `HTTP ${response.status}`);
-                }
+    const response = await fetch(apiUrl, {
+        method: 'PUT',
+        headers: {
+            'Authorization': `token ${token}`,
+            'Content-Type': 'application/json',
+            'Accept': 'application/vnd.github.v3+json'
+        },
+        body: JSON.stringify(payload)
+    });
 
-                const result = await response.json();
-                return {
-                    html_url: result.content.html_url,
-                    download_url: result.content.download_url,
-                    path: result.content.path
-                };
-            }
+    if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || `HTTP ${response.status}`);
+    }
+
+    return await response.json();
+}
 
             // Xử lý encoding - fix lỗi tiếng Việt
             fixEncoding(content) {
