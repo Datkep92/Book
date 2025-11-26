@@ -1,0 +1,780 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>BookReader · GitHub GIS</title>
+<style>
+  /* Basic reset */
+  *{box-sizing:border-box;margin:0;padding:0;font-family:Inter,Arial,sans-serif}
+  body{background:#f4f6f8;color:#222;height:100vh;overflow:hidden}
+  header{height:56px;background:#0b5ed7;color:#fff;display:flex;align-items:center;justify-content:space-between;padding:0 16px;position:relative;z-index:30}
+  header h1{font-size:18px}
+  header .controls{display:flex;gap:8px;align-items:center}
+  button{cursor:pointer;border:0;background:#0b5ed7;color:#fff;padding:8px 10px;border-radius:6px}
+  button.ghost{background:transparent;border:1px solid rgba(255,255,255,0.2)}
+  #app{display:flex;height:calc(100vh - 56px)}
+  /* Sidebar */
+  #sidebar{width:320px;background:#fff;border-right:1px solid #e6e9ee;padding:12px;overflow:auto;transition:transform .22s ease;z-index:2}
+  #sidebar.collapsed{transform:translateX(-100%)}
+  #search{display:flex;gap:8px;margin-bottom:10px}
+  #search input{flex:1;padding:8px;border-radius:6px;border:1px solid #d8dbe0}
+  #doc-list{margin-top:8px}
+  .doc-card{padding:10px;border-radius:8px;border:1px solid #eef1f5;margin-bottom:8px;background:#fff;cursor:pointer}
+  .doc-card .title{font-weight:600}
+  .doc-card .meta{font-size:12px;color:#666;margin-top:6px}
+  .badge-new{background:#ffe8a1;color:#7a5f00;padding:2px 6px;border-radius:10px;font-size:11px;margin-left:6px}
+  /* Reader */
+  #reader-wrap{flex:1;display:flex;flex-direction:column;overflow:hidden;padding:16px}
+  #reader-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
+  #reader-head .left{display:flex;align-items:center;gap:12px}
+  #reader-title{font-size:20px;font-weight:700}
+  #reader-meta{font-size:13px;color:#555}
+  #reader{flex:1;overflow:auto;background:#fff;padding:20px;border-radius:8px;border:1px solid #e6e9ee}
+  #progressbar{height:6px;background:#eef1f5;border-radius:6px;margin-top:10px;overflow:hidden}
+  #progress{height:100%;width:0;background:#0b5ed7;transition:width .15s linear}
+  /* TOC area small */
+  #toc-inline{margin-top:12px;padding:12px;border:1px dashed #e6e9ee;border-radius:8px;background:#fafcff}
+  #toc-inline ul{list-style:none;padding-left:0}
+  #toc-inline li{padding:4px 0}
+  /* Settings & Admin panels */
+  .panel{position:fixed;top:56px;right:-420px;width:380px;height:calc(100vh-56px);background:#fff;border-left:1px solid #e9edf3;padding:16px;box-shadow:-8px 0 24px rgba(15,15,15,0.06);transition:right .25s;z-index:40}
+  .panel.open{right:0}
+  .panel.left{left:-420px;right:auto}
+  .panel.left.open{left:0}
+  .panel h3{margin-bottom:8px}
+  .form-row{margin-bottom:10px}
+  .form-row input,.form-row textarea,.form-row select{width:100%;padding:8px;border-radius:6px;border:1px solid #d8dbe0}
+  .small{padding:6px 8px;font-size:13px;border-radius:6px}
+  .muted{color:#666;font-size:13px}
+  .list-scroll{max-height:200px;overflow:auto;border:1px solid #eef1f5;padding:8px;border-radius:6px;background:#fbfdff}
+  .item-row{display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px dashed #f1f4f8}
+  .item-row:last-child{border-bottom:0}
+  .btn-danger{background:#d90000}
+  /* user popup */
+  #user-popup{position:fixed;inset:0;background:rgba(0,0,0,0.45);display:flex;align-items:center;justify-content:center;z-index:60}
+  .popup{background:#fff;padding:18px;border-radius:10px;width:360px;box-shadow:0 10px 40px rgba(2,6,23,0.15)}
+  .popup h3{margin-bottom:10px}
+  /* responsive */
+  @media (max-width:900px){
+    #sidebar{position:fixed;left:0;top:56px;height:calc(100vh-56px);z-index:50}
+    .panel{width:100%;left:0;right:auto}
+  }
+  /* dark mode */
+  body.dark{background:#0f1720;color:#e6eef6}
+  body.dark #sidebar,body.dark .panel{background:#0b1220;color:#cfe2ff;border-color:#122334}
+  body.dark #reader{background:#071022}
+  body.dark input,body.dark textarea,body.dark select{background:#071022;color:#cfe2ff;border-color:#122334}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>BookReader · GitHub GIS</h1>
+  <div class="controls">
+    <button id="btnToggleSidebar" class="small">Toggle TOC</button>
+    <button id="btnSettings" class="small">Settings</button>
+    <button id="btnAdminPanel" class="small">Admin</button>
+  </div>
+</header>
+
+<div id="app">
+  <aside id="sidebar">
+    <div style="display:flex;gap:8px;align-items:center;margin-bottom:10px">
+      <input id="searchInput" placeholder="Tìm nhanh: tiêu đề hoặc tác giả..." />
+      <button id="btnClearSearch" class="small">X</button>
+    </div>
+    <div id="docList"></div>
+  </aside>
+
+  <main id="reader-wrap">
+    <div id="reader-head">
+      <div class="left">
+        <div id="reader-title">Chọn tài liệu</div>
+        <div id="reader-meta" class="muted">—</div>
+      </div>
+      <div class="right">
+        <button id="btnRefresh" class="small">Load từ GitHub</button>
+      </div>
+    </div>
+
+    <div id="reader">
+      <div id="docContent"><em>Chọn 1 tài liệu từ danh sách bên trái để đọc.</em></div>
+    </div>
+
+    <div id="progressbar"><div id="progress"></div></div>
+
+    <div id="toc-inline" style="display:none"><strong>Mục lục</strong><div id="tocList"></div></div>
+  </main>
+</div>
+
+<!-- SETTINGS PANEL -->
+<div class="panel" id="settingsPanel" aria-hidden="true">
+  <h3>Cài đặt người đọc</h3>
+  <div class="form-row">
+    <label>Cỡ chữ</label>
+    <select id="fontSize"><option value="0.9">Nhỏ</option><option value="1" selected>Trung bình</option><option value="1.2">Lớn</option><option value="1.5">Rất lớn</option></select>
+  </div>
+  <div class="form-row">
+    <label>Chế độ</label>
+    <select id="themeSelect"><option value="light">Sáng</option><option value="dark">Tối</option></select>
+  </div>
+  <div class="form-row">
+    <label>Khoảng cách dòng</label>
+    <select id="lineHeight"><option value="1.3">1.3</option><option value="1.5" selected>1.5</option><option value="1.8">1.8</option></select>
+  </div>
+  <div class="form-row">
+    <label>Độ rộng nội dung</label>
+    <select id="contentWidth"><option value="700">700px</option><option value="800" selected>800px</option><option value="100%">Toàn chiều rộng</option></select>
+  </div>
+  <div style="margin-top:10px">
+    <button id="btnSavePrefs" class="small">Lưu cài đặt</button>
+    <button id="btnResetPrefs" class="small" style="background:#999;margin-left:8px">Đặt lại mặc định</button>
+  </div>
+</div>
+
+<!-- ADMIN PANEL -->
+<div class="panel left" id="adminPanel" aria-hidden="true">
+  <h3>Admin</h3>
+  <div id="adminLogin">
+    <div class="form-row"><label>Username</label><input id="adminUser"></div>
+    <div class="form-row"><label>Password</label><input id="adminPass" type="password"></div>
+    <div class="form-row"><button id="btnAdminLogin">Đăng nhập</button></div>
+    <div id="adminLoginMsg" class="muted"></div>
+  </div>
+
+  <div id="adminArea" style="display:none">
+    <h4>Cấu hình GitHub (Nhập để load)</h4>
+    <div class="form-row"><label>Owner</label><input id="ghOwner" placeholder="owner (user hoặc org)"/></div>
+    <div class="form-row"><label>Repo</label><input id="ghRepo" placeholder="repo name"/></div>
+    <div class="form-row"><label>Base path (folder) (vd: gis)</label><input id="ghBasePath" placeholder="ví dụ: gis" /></div>
+    <div class="form-row"><label>Token (PAT) — không lưu nếu không check</label><input id="ghToken" type="password" placeholder="ghp_..." /></div>
+    <div style="display:flex;gap:8px">
+      <button id="btnLoadFromGH" class="small">Load từ GitHub</button>
+      <label style="display:flex;align-items:center;gap:6px"><input id="rememberToken" type="checkbox"/> Giữ token</label>
+    </div>
+
+    <hr style="margin:10px 0"/>
+
+    <h4>Upload tài liệu</h4>
+    <div class="form-row"><label>Tiêu đề</label><input id="uploadTitle"/></div>
+    <div class="form-row"><label>Tác giả</label><input id="uploadAuthor" placeholder="Tên tác giả (folder)"/></div>
+    <div class="form-row"><label>File HTML</label><input id="uploadFile" type="file" accept=".html"/></div>
+    <div class="form-row"><button id="btnUploadToGH" class="small">Upload lên GitHub</button></div>
+
+    <hr style="margin:10px 0"/>
+
+    <h4>Danh sách tài liệu trên GitHub</h4>
+    <div id="adminDocList" class="list-scroll"></div>
+
+    <hr style="margin:10px 0"/>
+
+    <h4>Người dùng đã đăng ký</h4>
+    <div id="userList" class="list-scroll"></div>
+
+    <h4>Thống kê</h4>
+    <div id="statsArea" class="list-scroll"></div>
+
+  </div>
+</div>
+
+<!-- USER POPUP (if no deviceID) -->
+<div id="userPopup" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);align-items:center;justify-content:center;z-index:80">
+  <div class="popup">
+    <h3>Đăng ký thiết bị</h3>
+    <div class="form-row"><input id="regName" placeholder="Họ và tên"/></div>
+    <div class="form-row"><input id="regPhone" placeholder="Số điện thoại"/></div>
+    <div style="margin-top:10px;display:flex;gap:8px">
+      <button id="btnRegisterNow">Đăng ký</button>
+      <button id="btnRegisterSkip" style="background:#888">Bỏ qua</button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* =========================
+   Helper: GitHub API minimal wrappers
+   ========================= */
+
+const GH = {
+  owner: null,
+  repo: null,
+  basePath: '',
+  token: null,
+  rememberToken: false,
+  setConfig({owner, repo, basePath, token, remember}) {
+    this.owner = owner; this.repo = repo; this.basePath = basePath || '';
+    this.token = token || null; this.rememberToken = !!remember;
+    if(this.rememberToken && token) sessionStorage.setItem('gh_token', token);
+    if(!this.rememberToken) sessionStorage.removeItem('gh_token');
+  },
+  apiUrl(path){ return `https://api.github.com/repos/${this.owner}/${this.repo}/${path}`; },
+  async getFile(path){
+    // path: path in repo, without leading slash
+    const url = this.apiUrl(`contents/${encodeURIComponent(path)}`);
+    const res = await fetch(url, {headers: this.token?{Authorization:`token ${this.token}`}:{}});
+    if(res.status===404) return null;
+    if(!res.ok) throw new Error(`GET file failed ${res.status}`);
+    return await res.json();
+  },
+  async getRawUrl(path){
+    // get download_url
+    const meta = await this.getFile(path);
+    return meta ? meta.download_url : null;
+  },
+  async getJson(path){
+    const meta = await this.getFile(path);
+    if(!meta) return null;
+    // content is base64
+    const txt = atob(meta.content.replace(/\n/g,''));
+    return JSON.parse(txt);
+  },
+  async putFile(path, contentText, message){
+    // create or update file at path with contentText (string)
+    const existing = await this.getFile(path);
+    const body = {
+      message: message || `Update ${path}`,
+      content: btoa(unescape(encodeURIComponent(contentText)))
+    };
+    if(existing && existing.sha) body.sha = existing.sha;
+    const url = this.apiUrl(`contents/${encodeURIComponent(path)}`);
+    const res = await fetch(url, {
+      method:'PUT',
+      headers: Object.assign({'Content-Type':'application/json'}, this.token?{Authorization:`token ${this.token}`}:{}),
+      body: JSON.stringify(body)
+    });
+    if(!res.ok) { const txt=await res.text(); throw new Error('PUT failed: '+res.status+' '+txt); }
+    return await res.json();
+  },
+  async deleteFile(path, message){
+    // delete file by supplying sha
+    const existing = await this.getFile(path);
+    if(!existing) throw new Error('File not found');
+    const body = {message: message || `Delete ${path}`, sha: existing.sha};
+    const url = this.apiUrl(`contents/${encodeURIComponent(path)}`);
+    const res = await fetch(url, {
+      method:'DELETE',
+      headers: Object.assign({'Content-Type':'application/json'}, this.token?{Authorization:`token ${this.token}`}:{}),
+      body: JSON.stringify(body)
+    });
+    if(!res.ok) { const txt=await res.text(); throw new Error('DELETE failed: '+res.status+' '+txt); }
+    return await res.json();
+  },
+  async listFiles(path){
+    // list contents of a folder
+    const url = this.apiUrl(`contents/${encodeURIComponent(path)}`);
+    const res = await fetch(url, {headers: this.token?{Authorization:`token ${this.token}`}:{}});
+    if(res.status===404) return [];
+    if(!res.ok) throw new Error('list failed '+res.status);
+    return await res.json();
+  }
+};
+
+/* =========================
+   App State
+   ========================= */
+let state = {
+  documents: [], // array of metadata
+  users: [],     // array of {deviceID,name,phone,registeredAt}
+  stats: { totalDevices:0, totalViews:0 },
+  currentDoc: null
+};
+
+/* =========================
+   Utilities
+   ========================= */
+function $(id){return document.getElementById(id);}
+function saveLocalDocs(){ localStorage.setItem('br_docs', JSON.stringify(state.documents)); }
+function loadLocalDocs(){ try{ const j=localStorage.getItem('br_docs'); return j?JSON.parse(j):[]; }catch(e){return[]} }
+function saveLocalUsers(){ localStorage.setItem('br_users', JSON.stringify(state.users)); }
+function loadLocalUsers(){ try{ const j=localStorage.getItem('br_users'); return j?JSON.parse(j):[]; }catch(e){return[]} }
+function saveLocalStats(){ localStorage.setItem('br_stats', JSON.stringify(state.stats)); }
+function loadLocalStats(){ try{ const j=localStorage.getItem('br_stats'); return j?JSON.parse(j):{totalDevices:0,totalViews:0}; }catch(e){return{totalDevices:0,totalViews:0}} }
+function now(){ return new Date().toISOString(); }
+function uid(){ return 'id_'+Math.random().toString(36).slice(2,9); }
+
+/* =========================
+   Init on load
+   ========================= */
+document.addEventListener('DOMContentLoaded', async ()=>{
+  // load local caches
+  state.documents = loadLocalDocs();
+  state.users = loadLocalUsers();
+  state.stats = loadLocalStats();
+
+  // restore token if remembered in sessionStorage
+  const token = sessionStorage.getItem('gh_token');
+  if(token) $('ghToken').value = token; // note: element may not exist yet
+
+  renderDocList();
+  renderUsersList();
+  renderStats();
+
+  bindUI();
+
+  // Device handling
+  let deviceID = localStorage.getItem('deviceID');
+  if(!deviceID){
+    // show popup to register
+    $('userPopup').style.display='flex';
+  } else {
+    // ensure user exists in local users list
+    const u = state.users.find(u=>u.deviceID===deviceID);
+    if(!u){
+      // store minimal device record
+      state.users.push({deviceID, name:'', phone:'', registeredAt: now()});
+      saveLocalUsers();
+    }
+  }
+});
+
+/* =========================
+   UI Bindings
+   ========================= */
+function bindUI(){
+  // Sidebar toggle
+  $('btnToggleSidebar').addEventListener('click', ()=> {
+    $('sidebar').classList.toggle('collapsed');
+  });
+
+  // Settings open
+  $('btnSettings').addEventListener('click', ()=> {
+    $('settingsPanel').classList.toggle('open');
+  });
+
+  // Admin open
+  $('btnAdminPanel').addEventListener('click', ()=> {
+    $('adminPanel').classList.toggle('open');
+  });
+
+  // Search input - live filter
+  $('searchInput').addEventListener('input', (e)=> {
+    const q = e.target.value.trim().toLowerCase();
+    renderDocList(q);
+  });
+  $('btnClearSearch').addEventListener('click', ()=>{ $('searchInput').value=''; renderDocList(''); });
+
+  // reader scroll progress
+  $('reader').addEventListener('scroll', ()=>{
+    const el = $('reader');
+    const progress = el.scrollTop / (el.scrollHeight - el.clientHeight);
+    $('progress').style.width = Math.max(0,Math.min(100,progress*100)) + '%';
+  });
+
+  // Settings controls
+  $('btnSavePrefs').addEventListener('click', savePreferences);
+  $('btnResetPrefs') && $('btnResetPrefs').addEventListener('click', resetPreferences);
+
+  // user popup
+  $('btnRegisterNow') && $('btnRegisterNow').addEventListener('click', userRegister);
+  $('btnRegisterSkip') && $('btnRegisterSkip').addEventListener('click', ()=>{ $('userPopup').style.display='none'; });
+
+  // Admin login
+  $('btnAdminLogin') && $('btnAdminLogin').addEventListener('click', adminLogin);
+  $('btnLoadFromGH') && $('btnLoadFromGH').addEventListener('click', loadFromGitHub);
+  $('btnUploadToGH') && $('btnUploadToGH').addEventListener('click', uploadToGitHub);
+
+  // Refresh button
+  $('btnRefresh') && $('btnRefresh').addEventListener('click', ()=>{
+    if(confirm('Tải lại documents từ GitHub (F5 cũng sẽ làm điều này)?')) loadFromGitHub();
+  });
+
+  // Save prefs immediate bindings
+  $('fontSize') && $('fontSize').addEventListener('change', e=>$('docContent').style.fontSize = e.target.value + 'rem');
+  $('themeSelect') && $('themeSelect').addEventListener('change', e=>document.body.classList.toggle('dark', e.target.value==='dark'));
+  $('lineHeight') && $('lineHeight').addEventListener('change', e=>$('docContent').style.lineHeight = e.target.value);
+  $('contentWidth') && $('contentWidth').addEventListener('change', e=>$('docContent').style.maxWidth = e.target.value==='100%'? '100%': (e.target.value+'px'));
+}
+
+/* =========================
+   Preferences
+   ========================= */
+function savePreferences(){
+  const prefs = {
+    fontSize: $('fontSize').value,
+    theme: $('themeSelect').value,
+    lineHeight: $('lineHeight').value,
+    contentWidth: $('contentWidth').value
+  };
+  localStorage.setItem('br_prefs', JSON.stringify(prefs));
+  applyPreferences();
+  alert('Đã lưu cài đặt');
+}
+function resetPreferences(){
+  localStorage.removeItem('br_prefs'); applyPreferences();
+  alert('Đã đặt lại mặc định');
+}
+function applyPreferences(){
+  const prefs = JSON.parse(localStorage.getItem('br_prefs') || '{"fontSize":"1","theme":"light","lineHeight":"1.5","contentWidth":"800"}');
+  $('fontSize').value = prefs.fontSize;
+  $('themeSelect').value = prefs.theme;
+  $('lineHeight').value = prefs.lineHeight;
+  $('contentWidth').value = prefs.contentWidth;
+  $('docContent').style.fontSize = prefs.fontSize + 'rem';
+  $('docContent').style.lineHeight = prefs.lineHeight;
+  $('docContent').style.maxWidth = prefs.contentWidth==='100%'? '100%': (prefs.contentWidth+'px');
+  document.body.classList.toggle('dark', prefs.theme==='dark');
+}
+
+/* =========================
+   User register
+   ========================= */
+function userRegister(){
+  const name = ( $('regName') && $('regName').value.trim() ) || '';
+  const phone = ( $('regPhone') && $('regPhone').value.trim() ) || '';
+  if(!name || !phone){ alert('Nhập tên và số điện thoại'); return; }
+  const deviceID = localStorage.getItem('deviceID') || 'dev-'+Math.random().toString(36).slice(2,9);
+  localStorage.setItem('deviceID', deviceID);
+  state.users.push({deviceID, name, phone, registeredAt: now()});
+  saveLocalUsers(); // writes br_users via earlier function? We'll save to localStorage separately
+  localStorage.setItem('br_users', JSON.stringify(state.users));
+  $('userPopup').style.display='none';
+  alert('Đăng ký thành công');
+  renderUsersList();
+}
+
+/* =========================
+   Render lists
+   ========================= */
+function renderDocList(filter=''){
+  const container = $('docList');
+  container.innerHTML = '';
+  const docs = state.documents || [];
+  const q = (filter || $('searchInput').value || '').trim().toLowerCase();
+  docs.forEach((d, idx) => {
+    const title = (d.title||'').toString();
+    const author = (d.author||'').toString();
+    if(q && !(title.toLowerCase().includes(q) || author.toLowerCase().includes(q))) return;
+    const div = document.createElement('div');
+    div.className = 'doc-card';
+    div.innerHTML = `<div class="title">${escapeHtml(title)}${isNew(d)?'<span class="badge-new">NEW</span>':''}</div>
+                     <div class="meta">${escapeHtml(author)} • ${d.updatedAt?new Date(d.updatedAt).toLocaleString():'-'}</div>`;
+    div.addEventListener('click', ()=> openDocument(idx));
+    container.appendChild(div);
+  });
+}
+
+function isNew(doc){
+  if(!doc.updatedAt) return false;
+  const diff = Date.now() - new Date(doc.updatedAt).getTime();
+  return diff < (3*24*3600*1000); // 3 days
+}
+
+function renderUsersList(){
+  const list = $('userList');
+  list.innerHTML = '';
+  const us = state.users || [];
+  if(!us.length){ list.innerHTML = '<div class="muted">Chưa có user</div>'; return;}
+  us.forEach(u=>{
+    const el = document.createElement('div');
+    el.className='item-row';
+    el.innerHTML = `<div>${escapeHtml(u.name||'--')} • ${escapeHtml(u.phone||'--')}<div class="muted" style="font-size:12px">${u.deviceID||''}</div></div>
+                    <div><button class="small" onclick="adminRemoveUser('${u.deviceID}')">Xóa</button></div>`;
+    list.appendChild(el);
+  });
+}
+
+function renderStats(){
+  const st = $('statsArea');
+  st.innerHTML = `<div>Total devices: ${state.stats.totalDevices||0}</div>
+                  <div>Total views: ${state.stats.totalViews||0}</div>`;
+}
+
+/* =========================
+   Open / Read document
+   ========================= */
+async function openDocument(index){
+  const doc = state.documents[index];
+  if(!doc) return alert('Tài liệu không tồn tại');
+  state.currentDoc = doc;
+  $('reader-title').textContent = doc.title || 'Không tiêu đề';
+  $('reader-meta').textContent = (doc.author?('Tác giả: '+doc.author):'');
+  // load file: doc.file is path to html in repo (relative)
+  if(doc.file && GH.owner && GH.repo){
+    try{
+      // get raw url
+      const rawUrl = await GH.getRawUrl((GH.basePath?GH.basePath+'/':'') + doc.file);
+      if(rawUrl){
+        const res = await fetch(rawUrl);
+        const html = await res.text();
+        $('docContent').innerHTML = html;
+      } else {
+        // maybe content stored inline in documents.json
+        $('docContent').innerHTML = doc.content || '<em>Không có nội dung</em>';
+      }
+    }catch(e){
+      console.error(e);
+      $('docContent').innerHTML = doc.content ? doc.content : '<em>Không tải được file</em>';
+    }
+  } else {
+    // load inline
+    $('docContent').innerHTML = doc.content || '<em>Không có nội dung</em>';
+  }
+  // generate TOC
+  generateTOC();
+  // update progress to top
+  $('reader').scrollTop = 0;
+  // log view locally + try to update stats
+  recordView(doc.id);
+}
+
+/* =========================
+   TOC generation
+   ========================= */
+function generateTOC(){
+  const headings = $('docContent').querySelectorAll('h1,h2,h3');
+  const tocArea = $('tocList');
+  if(!headings.length){ $('toc-inline').style.display='none'; tocArea.innerHTML=''; return; }
+  tocArea.innerHTML = '';
+  headings.forEach((h, i)=>{
+    if(!h.id) h.id = 'heading_'+i;
+    const li = document.createElement('div');
+    li.style.marginLeft = h.tagName==='H1' ? '0' : (h.tagName==='H2' ? '12px' : '20px');
+    li.innerHTML = `<a href="#${h.id}">${escapeHtml(h.textContent)}</a>`;
+    // click scroll
+    li.querySelector('a').addEventListener('click', (ev)=>{
+      ev.preventDefault();
+      document.getElementById(h.id).scrollIntoView({behavior:'smooth', block:'start'});
+    });
+    tocArea.appendChild(li);
+  });
+  $('toc-inline').style.display='block';
+}
+
+/* =========================
+   Record view & update stats/users
+   ========================= */
+function recordView(docId){
+  // add local record in documents metadata
+  const doc = state.documents.find(d=>d.id===docId);
+  if(!doc) return;
+  doc.views = doc.views || [];
+  const device = localStorage.getItem('deviceID') || null;
+  doc.views.push({ deviceID: device, at: now() });
+  state.stats.totalViews = (state.stats.totalViews||0) + 1;
+  // update unique devices
+  const knownDevices = new Set(state.users.map(u=>u.deviceID));
+  if(device && !knownDevices.has(device)){
+    // add minimal user - will be managed in users.json later
+    state.users.push({deviceID:device, name:'', phone:'', registeredAt: now()});
+    state.stats.totalDevices = state.users.length;
+    saveLocalUsers();
+  }
+  saveLocalDocs();
+  saveLocalStats();
+  renderStats();
+  // try push update to GitHub if token provided
+  if(GH.token && GH.owner && GH.repo){
+    try{ pushDocumentsJsonToGitHub(); }catch(e){ console.warn('Push docs failed', e); }
+  }
+}
+
+/* =========================
+   Admin: login & actions
+   ========================= */
+function adminLogin(){
+  const u = $('adminUser').value.trim();
+  const p = $('adminPass').value;
+  if(u==='admin' && p==='123456'){
+    adminLoggedIn();
+  } else {
+    alert('Sai username/password');
+  }
+}
+function adminLoggedIn(){
+  $('adminLogin').style.display='none';
+  $('adminArea').style.display='block';
+  $('adminContent').style.display='block';
+  $('adminArea').style.display='block';
+  $('adminLoginMsg').textContent='';
+  renderAdminDocList();
+  renderUsersList();
+  renderStats();
+}
+
+$('btnAdminLogin') && $('btnAdminLogin').addEventListener('click', adminLogin);
+
+async function loadFromGitHub(){
+  // read config from inputs
+  const owner = $('ghOwner').value.trim();
+  const repo = $('ghRepo').value.trim();
+  const basePath = $('ghBasePath').value.trim();
+  const token = $('ghToken').value.trim();
+  const remember = $('rememberToken').checked;
+  if(!owner||!repo) return alert('Nhập owner và repo');
+  GH.setConfig({owner, repo, basePath, token, remember});
+  try{
+    // load documents.json, users.json, stats.json
+    const docs = await GH.getJson((GH.basePath?GH.basePath+'/':'') + 'documents.json');
+    if(docs) { state.documents = docs; saveLocalDocs(); } else { state.documents = loadLocalDocs(); }
+    const users = await GH.getJson((GH.basePath?GH.basePath+'/':'') + 'users.json');
+    if(users) { state.users = users; saveLocalUsers(); } else { state.users = loadLocalUsers(); }
+    const stats = await GH.getJson((GH.basePath?GH.basePath+'/':'') + 'stats.json');
+    if(stats) { state.stats = stats; saveLocalStats(); } else { state.stats = loadLocalStats(); }
+    renderDocList();
+    renderUsersList();
+    renderStats();
+    renderAdminDocList();
+    alert('Load thành công từ GitHub');
+  }catch(e){
+    console.error(e);
+    alert('Không thể load từ GitHub: '+e.message);
+  }
+}
+
+async function pushDocumentsJsonToGitHub(){
+  // push state.documents to GH as documents.json
+  const path = (GH.basePath?GH.basePath+'/':'') + 'documents.json';
+  const content = JSON.stringify(state.documents, null, 2);
+  await GH.putFile(path, content, `Update documents.json by BookReader at ${now()}`);
+}
+async function pushUsersJsonToGitHub(){
+  const path = (GH.basePath?GH.basePath+'/':'') + 'users.json';
+  const content = JSON.stringify(state.users, null, 2);
+  await GH.putFile(path, content, `Update users.json by BookReader at ${now()}`);
+}
+async function pushStatsJsonToGitHub(){
+  const path = (GH.basePath?GH.basePath+'/':'') + 'stats.json';
+  const content = JSON.stringify(state.stats, null, 2);
+  await GH.putFile(path, content, `Update stats.json by BookReader at ${now()}`);
+}
+
+async function uploadToGitHub(){
+  if(!GH.owner || !GH.repo) return alert('Nhập GitHub owner/repo và Load trước');
+  const token = GH.token;
+  if(!token) return alert('Cần token GitHub để upload');
+  const fileInput = $('uploadFile');
+  const title = $('uploadTitle').value.trim();
+  const author = $('uploadAuthor').value.trim();
+  if(!fileInput || !fileInput.files || fileInput.files.length===0) return alert('Chọn file HTML để upload');
+  const file = fileInput.files[0];
+  const reader = new FileReader();
+  reader.onload = async (e) => {
+    const htmlContent = e.target.result;
+    // create path: basePath/author/filename
+    const folder = author ? author.replace(/[^\w-]/g,'_') : 'unknown';
+    const filename = file.name.endsWith('.html') ? file.name : (file.name + '.html');
+    const path = (GH.basePath?GH.basePath+'/':'') + `${folder}/${filename}`;
+    try{
+      await GH.putFile(path, htmlContent, `Upload ${filename} by admin`);
+      // add metadata to documents.json
+      const docMeta = {
+        id: uid(),
+        title: title || filename,
+        author: author || '',
+        file: `${folder}/${filename}`,
+        createdAt: now(),
+        updatedAt: now(),
+        views: []
+      };
+      state.documents.unshift(docMeta);
+      saveLocalDocs();
+      await pushDocumentsJsonToGitHub();
+      alert('Upload thành công và documents.json cập nhật');
+      renderDocList();
+      renderAdminDocList();
+    }catch(err){
+      console.error(err);
+      alert('Upload thất bại: ' + err.message);
+    }
+  };
+  reader.readAsText(file, 'utf-8');
+}
+
+/* =========================
+   Admin UI render functions
+   ========================= */
+function renderAdminDocList(){
+  const area = $('adminDocList'); area.innerHTML='';
+  (state.documents || []).forEach((d, idx)=>{
+    const div = document.createElement('div');
+    div.className='item-row';
+    div.innerHTML = `<div style="flex:1">
+      <strong>${escapeHtml(d.title)}</strong><div class="muted">${escapeHtml(d.author)} • ${d.file || 'inline'}</div>
+    </div>
+    <div style="display:flex;gap:6px">
+      <button class="small" onclick="adminEdit(${idx})">Sửa</button>
+      <button class="small" onclick="adminDelete(${idx})">Xóa</button>
+    </div>`;
+    area.appendChild(div);
+  });
+}
+
+window.adminEdit = function(idx){
+  const d = state.documents[idx];
+  const newTitle = prompt('Tiêu đề', d.title) || d.title;
+  const newAuthor = prompt('Tác giả', d.author) || d.author;
+  // optionally edit file path or content not in this prompt
+  d.title = newTitle; d.author = newAuthor; d.updatedAt = now();
+  saveLocalDocs(); renderAdminDocList(); renderDocList();
+  if(GH.token) pushDocumentsJsonToGitHub().catch(e=>console.warn(e));
+};
+window.adminDelete = async function(idx){
+  if(!confirm('Xóa tài liệu này?')) return;
+  const d = state.documents[idx];
+  // delete file from GH if present
+  if(d.file && GH.owner && GH.repo && GH.token){
+    try{
+      await GH.deleteFile((GH.basePath?GH.basePath+'/':'') + d.file, `Delete ${d.file} by admin`);
+    }catch(e){ console.warn('Delete file error', e); }
+  }
+  state.documents.splice(idx,1);
+  saveLocalDocs(); renderAdminDocList(); renderDocList();
+  if(GH.token) pushDocumentsJsonToGitHub().catch(e=>console.warn(e));
+};
+
+/* remove user */
+window.adminRemoveUser = function(deviceID){
+  state.users = state.users.filter(u=>u.deviceID!==deviceID);
+  saveLocalUsers();
+  renderUsersList();
+  if(GH.token) pushUsersJsonToGitHub().catch(e=>console.warn(e));
+};
+
+/* =========================
+   Helpers
+   ========================= */
+function escapeHtml(s){ if(!s) return ''; return s.replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+/* =========================
+   Save/Load local cache
+   ========================= */
+function saveLocalDocs(){ localStorage.setItem('br_docs', JSON.stringify(state.documents)); }
+function saveLocalUsers(){ localStorage.setItem('br_users', JSON.stringify(state.users)); }
+function saveLocalStats(){ localStorage.setItem('br_stats', JSON.stringify(state.stats)); }
+function loadLocalDocs(){ try{return JSON.parse(localStorage.getItem('br_docs')||'[]')}catch(e){return[]} }
+function loadLocalUsers(){ try{return JSON.parse(localStorage.getItem('br_users')||'[]')}catch(e){return[]} }
+function loadLocalStats(){ try{return JSON.parse(localStorage.getItem('br_stats')||'{"totalDevices":0,"totalViews":0}')}catch(e){return{totalDevices:0,totalViews:0}} }
+
+/* initialize local caches if empty */
+if(!localStorage.getItem('br_docs')) localStorage.setItem('br_docs', JSON.stringify([]));
+if(!localStorage.getItem('br_users')) localStorage.setItem('br_users', JSON.stringify([]));
+if(!localStorage.getItem('br_stats')) localStorage.setItem('br_stats', JSON.stringify({totalDevices:0,totalViews:0}));
+
+// load into state (on script run)
+state.documents = loadLocalDocs();
+state.users = loadLocalUsers();
+state.stats = loadLocalStats();
+renderDocList();
+renderUsersList();
+renderStats();
+applyPreferences();
+
+/* =========================
+   Expose some functions for button bindings
+   ========================= */
+window.loadFromGitHub = loadFromGitHub;
+window.uploadToGitHub = uploadToGitHub;
+window.adminLogin = adminLogin;
+
+/* =========================
+   Keyboard shortcut: Ctrl+Shift+S => Show stats
+   ========================= */
+document.addEventListener('keydown', (e)=>{
+  if(e.ctrlKey && e.shiftKey && e.key.toLowerCase()==='s'){
+    alert(JSON.stringify(state.stats,null,2));
+  }
+});
+</script>
+</body>
+</html>
