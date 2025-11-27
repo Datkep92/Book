@@ -2565,4 +2565,13 @@
 
 .tts-paused {
     background: #f59e0b !important;
+
+}
+.content-reader {
+    flex: 1;
+    padding: var(--space-4);
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    position: relative;
+    margin-top: 2px; /* Nội dung cách header 2px */
 }
