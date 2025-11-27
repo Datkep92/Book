@@ -300,7 +300,7 @@ async showRegistrationForm() {
     // auth.js - SỬA hàm adminLogin
     async adminLogin(username, password) {
         // Kiểm tra credentials cố định
-        if (username === 'admin' && password === '123456') {
+        if (username === 'admin' && password === '123123') {
             this.isAdmin = true;
             localStorage.setItem('bookreader_admin_logged', 'true');
             
@@ -764,4 +764,5 @@ async uploadToGitHub(path, content, message = 'Add new document') {
         div.textContent = text;
         return div.innerHTML;
     }
+
 }
